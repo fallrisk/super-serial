@@ -8,13 +8,19 @@ References
 
 import argparse
 import code
+import imp
+import io
 import json
 import os.path as osp
 import re
 import sys
 
+from types import CodeType
+
 from PyQt5 import QtCore, QtWidgets, QtSerialPort, QtGui
 from PyQt5.Qt import QDesktopServices, QUrl
+
+import console
 
 # http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html#crashes-on-exit
 app = None
@@ -355,32 +361,20 @@ class ConsoleWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-        self._ii = QtInteractiveInterperter()
+        self._ric = console.RemoteConsole()
 
     def onEnterKey(self):
-        # output = eval(self.consoleInput.text(), globals(), locals())
-        # You cannont evaluate a statement.
+        # https://github.com/pallets/werkzeug/blob/master/werkzeug/debug/console.py
+        # https://www.pythoncentral.io/embed-interactive-python-interpreter-console/
+
         user_input = self.consoleInput.text()
         self.consoleInput.setText('')
 
-        self._ii.runcode(user_input)
-        output = self._ii.getOutput()
+        self._ric.push(user_input)
+        output = self._ric.getResult()
 
-        self.consoleOutput.append(user_input)
-        self.consoleOutput.append(output)
-
-
-class QtInteractiveInterperter(code.InteractiveInterpreter):
-    def __init__(self, locals=None):
-        code.InteractiveInterpreter.__init__(self, locals)
-        self.filename = '<qt>'
-        self._output = ''
-
-    def write(self, data):
-        self._output = data
-
-    def getOutput(self):
-        return self._output
+        self.consoleOutput.append('>>> ' + user_input)
+        self.consoleOutput.append(output[:-1])
 
 
 def main():
