@@ -152,6 +152,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.console.hide()
 
     def closeEvent(self, event):
+        # This method is overriding the event 'close'.
+
         if not preferences['prompt_on_quit']:
             return
 
@@ -353,7 +355,7 @@ class ConsoleWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-        self._ii = code.InteractiveInterpreter()
+        self._ii = QtInteractiveInterperter()
 
     def onEnterKey(self):
         # output = eval(self.consoleInput.text(), globals(), locals())
@@ -361,11 +363,24 @@ class ConsoleWidget(QtWidgets.QWidget):
         user_input = self.consoleInput.text()
         self.consoleInput.setText('')
 
-        # https://stackoverflow.com/questions/5597836/embed-create-an-interactive-python-shell-inside-a-python-program
-        output = self._ii.runcode(user_input)
+        self._ii.runcode(user_input)
+        output = self._ii.getOutput()
 
         self.consoleOutput.append(user_input)
         self.consoleOutput.append(output)
+
+
+class QtInteractiveInterperter(code.InteractiveInterpreter):
+    def __init__(self, locals=None):
+        code.InteractiveInterpreter.__init__(self, locals)
+        self.filename = '<qt>'
+        self._output = ''
+
+    def write(self, data):
+        self._output = data
+
+    def getOutput(self):
+        return self._output
 
 
 def main():
