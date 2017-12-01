@@ -7,8 +7,10 @@ References
 """
 
 import argparse
+import json
 import ctypes
 import os.path as osp
+import re
 import sys
 
 from PyQt5 import QtCore, QtWidgets, QtSerialPort, QtGui
@@ -16,7 +18,9 @@ from PyQt5.Qt import QDesktopServices, QUrl
 
 # http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html#crashes-on-exit
 app = None
-app_icon = None
+
+# TODO: Set to default preferences.
+preferences = None
 
 _super_serial_version = 'v0.1.0'
 
@@ -51,6 +55,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                                  QtCore.Qt.CTRL + QtCore.Qt.Key_Q)
         self.menuBar().addMenu(self.super_serial_menu)
 
+        self.view_menu = QtWidgets.QMenu('&View', self)
+        self.menuBar().addMenu(self.view_menu)
+
+        console_action = self.view_menu.addAction('Show Console', self.showConsole,
+            'Ctrl+`')
+
         self.help_menu = QtWidgets.QMenu('&Help', self)
         self.menuBar().addSeparator()
         self.menuBar().addMenu(self.help_menu)
@@ -64,10 +74,29 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         l = QtWidgets.QVBoxLayout(self.main_widget)
 
+        mono_font = QtGui.QFont('Hack')
+
+        top = QtWidgets.QTextEdit()
+        top.setCurrentFont(mono_font)
+        top.setFontPointSize(12)
+        top.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.bottom = QtWidgets.QTextEdit()
+
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        splitter.addWidget(top)
+        splitter.addWidget(self.bottom)
+
+        splitter.setSizes([600, 200])
+
+        top.append("hello world")
+
+        l.addWidget(splitter)
+
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
 
         self.statusBar().showMessage("Nothing here yet.", 2000)
+        self.bottom.hide()
 
     def fileQuit(self):
         self.close()
@@ -93,6 +122,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         dialog.show()
         dialog.exec_()
 
+        serial_config = dialog.getSerialConfig()
+        if serial_config is None:
+            return
+
+        # Connect to the serial port.
+        self.serial_conn = QtSerialPort.QSerialPort
+
     def disconnect(self):
         pass
 
@@ -106,12 +142,21 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if new_title != '':
             self.setWindowTitle(new_title)
 
+    def showConsole(self):
+        # To make the console not viewable...
+        # https://stackoverflow.com/a/371634
+        if self.bottom.isHidden():
+            self.bottom.show()
+        else:
+            self.bottom.hide()
+
 
 class SetTitleDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(SetTitleDialog, self).__init__(parent)
 
         self.setWindowTitle("Set Window Title")
+        self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
 
         self._title = ''
 
@@ -152,6 +197,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         super(SerialConfigDialog, self).__init__(parent)
 
         self.setWindowTitle('Set Window Title')
+        # https://doc.qt.io/qt-5/qt.html
         self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.MSWindowsFixedSizeDialogHint)
 
         self.portLabel = QtWidgets.QLabel('Serial Port')
@@ -165,7 +211,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
         self.baudrateLabel = QtWidgets.QLabel('Baudrate')
 
-        self.baudrateEdit = QtWidgets.QLineEdit()
+        self.baudrateEdit = QtWidgets.QLineEdit('115200')
 
         self.databitsLabel = QtWidgets.QLabel('Databits')
 
@@ -174,6 +220,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.databitsComboBox.addItem('6')
         self.databitsComboBox.addItem('7')
         self.databitsComboBox.addItem('8')
+        self.databitsComboBox.setCurrentIndex(3)
 
         self.stopbitsLabel = QtWidgets.QLabel('Stopbits')
 
@@ -181,6 +228,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.stopbitsComboBox.addItem('1')
         self.stopbitsComboBox.addItem('1.5')
         self.stopbitsComboBox.addItem('2')
+        self.stopbitsComboBox.setCurrentIndex(0)
 
         self.parityLabel = QtWidgets.QLabel('Parity')
 
@@ -190,6 +238,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.parityComboBox.addItem('EVEN')
         self.parityComboBox.addItem('SPACE')
         self.parityComboBox.addItem('MARK')
+        self.parityComboBox.setCurrentIndex(0)
 
         self.flowControlLabel = QtWidgets.QLabel('Flow Control')
 
@@ -198,6 +247,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.flowControlComboBox.addItem('XON/XOFF')
         self.flowControlComboBox.addItem('RTS/CTS')
         self.flowControlComboBox.addItem('DSR/DTR')
+        self.flowControlComboBox.setCurrentIndex(2)
 
         self.cancelButton = QtWidgets.QPushButton('Cancel')
         self.connectButton = QtWidgets.QPushButton('Connect')
@@ -205,6 +255,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.loadButton = QtWidgets.QPushButton('Load')
 
         self.cancelButton.clicked.connect(self.cancel)
+        self.connectButton.clicked.connect(self.connect)
 
         # http://www.bogotobogo.com/Qt/Qt5_GridLayout.php
         layout = QtWidgets.QGridLayout()
@@ -239,12 +290,63 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
         self.setLayout(layout)
 
+        # Set default configuration. Set to 'None' so that if the dialog is
+        # canceled the system won't try to connect.
+        self._serial_config = None
+
     def cancel(self):
+        self._serial_config = None
         self.close()
+
+    def connect(self):
+        # http://pyqt.sourceforge.net/Docs/PyQt5/QtSerialPort.html#PyQt5-QtSerialPort
+        # https://doc.qt.io/qt-5/qserialport.html
+        serial_config = {
+            'port': self.portComboBox.currentText(),
+            'baudrate': int(self.baudrateEdit.text()),
+            'databits': int(self.databitsComboBox.currentText()),
+            'stopbits': self.stopbitsComboBox.currentText(),
+            'parity': self.parityComboBox.currentText(),
+            'flow_control': self.flowControlComboBox.currentText()
+        }
+
+        # Attempt to connect to the device. If not successful shake the
+        # window.
+
+        print(serial_config)
+
+        elf._serial_config = serial_config
+        self.close()
+
+    def getSerialConfig(self):
+        return _serial_config
+
+
+class ConsoleWidget(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super(ConsoleWidget, self).__init__(parent)
+
+        consoleOutput = QtWidgets.QTextEdit()
+
+        consoleInput = QtWidgets.QTextEdit()
+
+        vboxLayout0 = QtWidgets.QVBoxLayout()
 
 
 def main():
     global app
+    global preferences
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--version', action='version', version=_super_serial_version)
+
+    args = parser.parse_args()
+
+    with open('preferences.json', encoding='utf-8') as data_file:
+        contents = data_file.read()
+        # Remove all comments that start with "//".
+        contents = re.sub('//.*', '', contents)
+        preferences = json.loads(contents)
 
     app = QtWidgets.QApplication(sys.argv)
 
