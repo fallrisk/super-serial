@@ -7,8 +7,8 @@ References
 """
 
 import argparse
+import code
 import json
-import ctypes
 import os.path as osp
 import re
 import sys
@@ -150,6 +150,19 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.console.show()
         else:
             self.console.hide()
+
+    def closeEvent(self, event):
+        if not preferences['prompt_on_quit']:
+            return
+
+        quit_msg = "Are you sure you want to exit the program?"
+        reply = QtWidgets.QMessageBox.question(self, 'Message',
+                         quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
 
 class SetTitleDialog(QtWidgets.QDialog):
@@ -340,12 +353,18 @@ class ConsoleWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
+        self._ii = code.InteractiveInterpreter()
+
     def onEnterKey(self):
         # output = eval(self.consoleInput.text(), globals(), locals())
         # You cannont evaluate a statement.
-        output = exec('x=1')
-        text = '>>> ' + self.consoleInput.text()
-        self.consoleOutput.append(text)
+        user_input = self.consoleInput.text()
+        self.consoleInput.setText('')
+
+        # https://stackoverflow.com/questions/5597836/embed-create-an-interactive-python-shell-inside-a-python-program
+        output = self._ii.runcode(user_input)
+
+        self.consoleOutput.append(user_input)
         self.consoleOutput.append(output)
 
 
@@ -362,7 +381,10 @@ def main():
     with open('preferences.json', encoding='utf-8') as data_file:
         contents = data_file.read()
         # Remove all comments that start with "//".
-        contents = re.sub('//.*', '', contents)
+        contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
+        # Remove blank lines.
+        contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
+
         preferences = json.loads(contents)
 
     app = QtWidgets.QApplication(sys.argv)

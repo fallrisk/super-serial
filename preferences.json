@@ -1,6 +1,11 @@
 // Sample Preferences File
 {
-	// Test
-	"font_size": 12,
-	"font_face": "Hack"
+  // If this is commented out then the default system font is used. If the
+  // font specified isn't found on the system then the default system font is
+  // used.
+  "font_face": "Hack",
+  // Only values from 8 to 22 are allowed.
+  "font_size": 12,
+  // Do you want a confirmation when you quit the program?
+  "prompt_on_quit": false
 }
