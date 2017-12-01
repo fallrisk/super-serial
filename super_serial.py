@@ -80,11 +80,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         top.setCurrentFont(mono_font)
         top.setFontPointSize(12)
         top.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-        self.bottom = QtWidgets.QTextEdit()
+        # self.console = QtWidgets.QTextEdit()
+        self.console = ConsoleWidget()
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         splitter.addWidget(top)
-        splitter.addWidget(self.bottom)
+        splitter.addWidget(self.console)
 
         splitter.setSizes([600, 200])
 
@@ -96,7 +97,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self.statusBar().showMessage("Nothing here yet.", 2000)
-        self.bottom.hide()
+        self.console.hide()
 
     def fileQuit(self):
         self.close()
@@ -145,10 +146,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def showConsole(self):
         # To make the console not viewable...
         # https://stackoverflow.com/a/371634
-        if self.bottom.isHidden():
-            self.bottom.show()
+        if self.console.isHidden():
+            self.console.show()
         else:
-            self.bottom.hide()
+            self.console.hide()
 
 
 class SetTitleDialog(QtWidgets.QDialog):
@@ -326,11 +327,26 @@ class ConsoleWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(ConsoleWidget, self).__init__(parent)
 
-        consoleOutput = QtWidgets.QTextEdit()
+        self.consoleOutput = QtWidgets.QTextEdit()
+        self.consoleInput = QtWidgets.QLineEdit()
 
-        consoleInput = QtWidgets.QTextEdit()
+        self.consoleOutput.setReadOnly(True)
 
-        vboxLayout0 = QtWidgets.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.consoleOutput)
+        layout.addWidget(self.consoleInput)
+
+        self.consoleInput.returnPressed.connect(self.onEnterKey)
+
+        self.setLayout(layout)
+
+    def onEnterKey(self):
+        # output = eval(self.consoleInput.text(), globals(), locals())
+        # You cannont evaluate a statement.
+        output = exec('x=1')
+        text = '>>> ' + self.consoleInput.text()
+        self.consoleOutput.append(text)
+        self.consoleOutput.append(output)
 
 
 def main():
@@ -342,6 +358,7 @@ def main():
 
     args = parser.parse_args()
 
+    # Load the preferences file.
     with open('preferences.json', encoding='utf-8') as data_file:
         contents = data_file.read()
         # Remove all comments that start with "//".
