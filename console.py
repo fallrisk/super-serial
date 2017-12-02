@@ -46,7 +46,7 @@ class RemoteConsole(InteractiveConsole):
         return
 
     def write(self, data):
-        self._result = 'exception:' + data
+        self._result = data
 
     def getResult(self):
         return self._result

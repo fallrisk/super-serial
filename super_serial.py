@@ -3,12 +3,12 @@ Copyright Justin Watson 2017
 
 References
 * http://pyqt.sourceforge.net/Docs/PyQt5/modules.html#ref-module-index
+* https://doc.qt.io/qt-5/qt.html
 
 """
 
 import argparse
-import code
-import imp
+from enum import Enum
 import io
 import json
 import os.path as osp
@@ -215,8 +215,28 @@ class SetTitleDialog(QtWidgets.QDialog):
 
 
 class SerialConfigDialog(QtWidgets.QDialog):
+    # https://doc.qt.io/qt-5/qserialport.html
+    _errors = [
+        'No error occurred.',
+        'An error occurred while attemptiong to open a non-existing device.',
+        'An error occurred while attempting to open an already opened device by another process or a user not having enough permission and credentials to open.',
+        'An error occurred while attempting to open an already opened device in this object.',
+        'Parity error detected by the hardware while reading data. This value is obsolete. We strongly advise against using it in new code.',
+        'Framing error detected by the hardware while reading data. This value is obsolete. We strongly advise against using it in new code.',
+        'Break condition detected by the hardware on the input line. This value is obsolete. We strongly advise against using it in new code.',
+        'An I/O error occurred while writing the data.',
+        'An I/O error occurred while reading the data.',
+        'An I/O error occurred when a resource becomes unavailable, e.g. when the device is unexpectedly removed from the system.',
+        'The requested device operation is not supported or prohibited by the running operating system.'<
+        'An unidentified error occurred.',
+        'A timeout error occurred. This value was introduced in QtSerialPort 5.2.',
+        'This error occurs when an operation is executed that can only be successfully performed if the device is open. This value was introduced in QtSerialPort 5.2.'
+    ]
+
     def __init__(self, parent=None):
         super(SerialConfigDialog, self).__init__(parent)
+
+        self._serial_config = {}
 
         self.setWindowTitle('Set Window Title')
         # https://doc.qt.io/qt-5/qt.html
@@ -332,16 +352,29 @@ class SerialConfigDialog(QtWidgets.QDialog):
             'flow_control': self.flowControlComboBox.currentText()
         }
 
+        serial_conn = QtSerialPort.QSerialPort()
+        serial_conn.setPortName('COM6')
+        serial_conn.setBaudRate(115200, QtSerialPort.QSerialPort.AllDirections)
+        serial_conn.setFlowControl(QtSerialPort.QSerialPort.HardwareControl)
+        serial_conn.setStopBits(QtSerialPort.QSerialPort.OneStop)
+        serial_conn.setDataBits(QtSerialPort.QSerialPort.Data8)
+        serial_conn.setParity(QtSerialPort.QSerialPort.NoParity)
+        open_result = serial_conn.open(QtCore.QIODevice.ReadWrite)
+
+        if open_result == False:
+            print(self._errors[serial_conn.error()])
+
         # Attempt to connect to the device. If not successful shake the
         # window.
 
         print(serial_config)
 
-        elf._serial_config = serial_config
+        self._serial_config = serial_config
+        serial_conn.close()
         self.close()
 
     def getSerialConfig(self):
-        return _serial_config
+        return self._serial_config
 
 
 class ConsoleWidget(QtWidgets.QWidget):
@@ -366,6 +399,7 @@ class ConsoleWidget(QtWidgets.QWidget):
     def onEnterKey(self):
         # https://github.com/pallets/werkzeug/blob/master/werkzeug/debug/console.py
         # https://www.pythoncentral.io/embed-interactive-python-interpreter-console/
+        # http://code.activestate.com/recipes/355319-using-codeinteractiveconsole-to-embed-a-python-she/
 
         user_input = self.consoleInput.text()
         self.consoleInput.setText('')
