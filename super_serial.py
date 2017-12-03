@@ -1,9 +1,27 @@
 """
-Copyright Justin Watson 2017
+Copyright 2017 Justin Watson
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 
 References
+----------
 * http://pyqt.sourceforge.net/Docs/PyQt5/modules.html#ref-module-index
 * https://doc.qt.io/qt-5/qt.html
+* http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html
+* https://wiki.python.org/moin/PyQt/Threading%2C_Signals_and_Slots
+* https://wiki.python.org/moin/PyQt/Python%20syntax%20highlighting
+* http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html
+* https://wiki.python.org/moin/PyQt/SampleCode
 
 """
 
@@ -17,10 +35,11 @@ import sys
 
 from types import CodeType
 
-from PyQt5 import QtCore, QtWidgets, QtSerialPort, QtGui
+from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.Qt import QDesktopServices, QUrl
 
 import console
+import serial
 
 # http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html#crashes-on-exit
 app = None
@@ -36,6 +55,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Super Serial")
 
+        # The serial port class manages all the serial port.
+        # It creates a thread to hold the data. It handles
+        # connecting and sending events to the gui.
+        self._serial_port = serial.SerialPort()
+
         script_dir = osp.dirname(osp.realpath(__file__))
         app_icon = QtGui.QIcon(script_dir + osp.sep + 'super_serial_64x64.ico')
 
@@ -47,13 +71,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.super_serial_menu = QtWidgets.QMenu('&Super Serial', self)
         self.menuBar().addMenu(self.super_serial_menu)
 
-        self.super_serial_menu.addAction('&Connect to Device', self.connect,
+        self.connect_action = self.super_serial_menu.addAction('&Connect to Device', self.connect,
             QtCore.Qt.CTRL + QtCore.Qt.Key_P)
 
         # The function addAction returns a QAction object.
-        discconect_action = self.super_serial_menu.addAction('&Disconnect', self.disconnect,
+        self.disconnect_action = self.super_serial_menu.addAction('&Disconnect', self.disconnect,
             QtCore.Qt.CTRL + QtCore.Qt.Key_D)
-        discconect_action.setEnabled(False)
+        self.disconnect_action.setEnabled(False)
 
         self.super_serial_menu.addAction('&Set Title', self.setTitle)
 
@@ -82,27 +106,34 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         mono_font = QtGui.QFont('Hack')
 
-        top = QtWidgets.QTextEdit()
-        top.setCurrentFont(mono_font)
-        top.setFontPointSize(12)
-        top.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.serialDataWidget = QtWidgets.QTextEdit()
+        self.serialDataWidget.setCurrentFont(mono_font)
+        self.serialDataWidget.setFontPointSize(12)
+        self.serialDataWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         # self.console = QtWidgets.QTextEdit()
         self.console = ConsoleWidget()
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        splitter.addWidget(top)
+        splitter.addWidget(self.serialDataWidget)
         splitter.addWidget(self.console)
 
         splitter.setSizes([600, 200])
 
-        top.append("hello world")
+        self.serialDataWidget.append("hello world")
+
+        #self._serial_port.newData.connect(self.onNewSerialRead)
 
         l.addWidget(splitter)
 
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
 
-        self.statusBar().showMessage("Nothing here yet.", 2000)
+        self.connectionLabel = QtWidgets.QLabel('Disconnected')
+
+        self.statusBar().addWidget(self.connectionLabel)
+        self._serial_port.connected.connect(self._on_serial_connection)
+        self._serial_port.disconnected.connect(self._on_serial_disconnection)
+
         self.console.hide()
 
     def fileQuit(self):
@@ -113,7 +144,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def about(self):
         QtWidgets.QMessageBox.about(self, 'Super Serial',
-            'Super Serial\r\nVersion: {}'.format(_super_serial_version))
+            'Copyright 2017 Justin Watson\r\nSuper Serial\r\nVersion: {}'.format(_super_serial_version))
 
     def webpage(self):
         url = QUrl('http://superserial.io')
@@ -124,30 +155,19 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         QDesktopServices.openUrl(url)
 
     def connect(self):
-        dialog = SerialConfigDialog()
+        dialog = SerialConfigDialog(self, self._serial_port)
         dialog.setModal(True)
         dialog.show()
         dialog.exec_()
-
-        serial_config = dialog.getSerialConfig()
-        if serial_config is None:
-            return
-
-        # Connect to the serial port.
-        self.serial_conn = QtSerialPort.QSerialPort
 
     def disconnect(self):
-        pass
+        self._serial_port.close()
 
     def setTitle(self):
-        dialog = SetTitleDialog()
+        dialog = SetTitleDialog(self)
         dialog.setModal(True)
         dialog.show()
         dialog.exec_()
-
-        new_title = dialog.getTitle()
-        if new_title != '':
-            self.setWindowTitle(new_title)
 
     def showConsole(self):
         # To make the console not viewable...
@@ -163,7 +183,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if not preferences['prompt_on_quit']:
             return
 
-        quit_msg = "Are you sure you want to exit the program?"
+        quit_msg = "Are you sure you want to exit Super Serial?"
         reply = QtWidgets.QMessageBox.question(self, 'Message',
                          quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
@@ -172,15 +192,26 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             event.ignore()
 
+    def _on_serial_connection(self):
+        self.connectionLabel.setText('Connected: ' + self._serial_port.config_to_str())
+        self.disconnect_action.setEnabled(True)
+        self.connect_action.setEnabled(False)
+
+    def _on_serial_disconnection(self):
+        self.connectionLabel.setText('Disconnected')
+        self.disconnect_action.setEnabled(False)
+        self.connect_action.setEnabled(True)
+
+    def onNewSerialRead(self):
+        self.serialDataWidget.append()
+
 
 class SetTitleDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(SetTitleDialog, self).__init__(parent)
 
         self.setWindowTitle("Set Window Title")
-        self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
-
-        self._title = ''
+        self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.Dialog)
 
         self.titleLineEdit = QtWidgets.QLineEdit()
         self.setTitleButton = QtWidgets.QPushButton("Set Title")
@@ -201,46 +232,35 @@ class SetTitleDialog(QtWidgets.QDialog):
         layout.addWidget(self.cancelButton, 1, 1, 1, 1)
 
         self.setLayout(layout)
+        self.adjustSize()
 
     def cancel(self):
-        self._title = ''
         self.close()
 
     def setTitle(self):
-        self._title = self.titleLineEdit.text()
+        self.parentWidget().setWindowTitle(self.titleLineEdit.text())
         self.close()
-
-    def getTitle(self):
-        return self._title
 
 
 class SerialConfigDialog(QtWidgets.QDialog):
-    # https://doc.qt.io/qt-5/qserialport.html
-    _errors = [
-        'No error occurred.',
-        'An error occurred while attemptiong to open a non-existing device.',
-        'An error occurred while attempting to open an already opened device by another process or a user not having enough permission and credentials to open.',
-        'An error occurred while attempting to open an already opened device in this object.',
-        'Parity error detected by the hardware while reading data. This value is obsolete. We strongly advise against using it in new code.',
-        'Framing error detected by the hardware while reading data. This value is obsolete. We strongly advise against using it in new code.',
-        'Break condition detected by the hardware on the input line. This value is obsolete. We strongly advise against using it in new code.',
-        'An I/O error occurred while writing the data.',
-        'An I/O error occurred while reading the data.',
-        'An I/O error occurred when a resource becomes unavailable, e.g. when the device is unexpectedly removed from the system.',
-        'The requested device operation is not supported or prohibited by the running operating system.'<
-        'An unidentified error occurred.',
-        'A timeout error occurred. This value was introduced in QtSerialPort 5.2.',
-        'This error occurs when an operation is executed that can only be successfully performed if the device is open. This value was introduced in QtSerialPort 5.2.'
-    ]
+    """Dialog to configure the serial port.
 
-    def __init__(self, parent=None):
+    Parameters
+    -----------
+    serial_port
+        serial.SerialPort instance
+
+    """
+    def __init__(self, parent, serial_port=None):
         super(SerialConfigDialog, self).__init__(parent)
-
-        self._serial_config = {}
-
+        # Memory Leaks with Dialogs https://stackoverflow.com/a/37928086
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self._serial_config = None
+        self._serial_port = serial_port
         self.setWindowTitle('Set Window Title')
         # https://doc.qt.io/qt-5/qt.html
-        self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.MSWindowsFixedSizeDialogHint)
+        # http://doc.qt.io/qt-5/qt.html#WindowType-enum
+        self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.MSWindowsFixedSizeDialogHint | QtCore.Qt.Dialog)
 
         self.portLabel = QtWidgets.QLabel('Serial Port')
 
@@ -248,12 +268,14 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.portComboBox.addItem("COM4")
         self.portComboBox.addItem("COM5")
         self.portComboBox.addItem("COM6")
+        self.portComboBox.addItem('/dev/ttyACM0')
+        self.portComboBox.setCurrentIndex(3)
 
         self.scanComsButton = QtWidgets.QPushButton('Scan COMs')
 
         self.baudrateLabel = QtWidgets.QLabel('Baudrate')
 
-        self.baudrateEdit = QtWidgets.QLineEdit('115200')
+        self.baudrateEdit = QtWidgets.QLineEdit('9600')
 
         self.databitsLabel = QtWidgets.QLabel('Databits')
 
@@ -286,10 +308,9 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
         self.flowControlComboBox = QtWidgets.QComboBox()
         self.flowControlComboBox.addItem('NONE')
-        self.flowControlComboBox.addItem('XON/XOFF')
         self.flowControlComboBox.addItem('RTS/CTS')
-        self.flowControlComboBox.addItem('DSR/DTR')
-        self.flowControlComboBox.setCurrentIndex(2)
+        self.flowControlComboBox.addItem('XON/XOFF')
+        self.flowControlComboBox.setCurrentIndex(0)
 
         self.cancelButton = QtWidgets.QPushButton('Cancel')
         self.connectButton = QtWidgets.QPushButton('Connect')
@@ -301,9 +322,6 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
         # http://www.bogotobogo.com/Qt/Qt5_GridLayout.php
         layout = QtWidgets.QGridLayout()
-        #layout.setColumnStretch(1, 1)
-        # layout.setColumnMinimumWidth(0, 200)
-        # layout.setColumnMinimumWidth(1, 100)
 
         # row, column, rowspan, colspan
         layout.addWidget(self.portLabel, 0, 0, 1, 2)
@@ -331,18 +349,13 @@ class SerialConfigDialog(QtWidgets.QDialog):
         layout.addWidget(self.loadButton, 6, 3, 1, 1)
 
         self.setLayout(layout)
-
-        # Set default configuration. Set to 'None' so that if the dialog is
-        # canceled the system won't try to connect.
-        self._serial_config = None
+        self.adjustSize()
 
     def cancel(self):
         self._serial_config = None
         self.close()
 
     def connect(self):
-        # http://pyqt.sourceforge.net/Docs/PyQt5/QtSerialPort.html#PyQt5-QtSerialPort
-        # https://doc.qt.io/qt-5/qserialport.html
         serial_config = {
             'port': self.portComboBox.currentText(),
             'baudrate': int(self.baudrateEdit.text()),
@@ -352,29 +365,32 @@ class SerialConfigDialog(QtWidgets.QDialog):
             'flow_control': self.flowControlComboBox.currentText()
         }
 
-        serial_conn = QtSerialPort.QSerialPort()
-        serial_conn.setPortName('COM6')
-        serial_conn.setBaudRate(115200, QtSerialPort.QSerialPort.AllDirections)
-        serial_conn.setFlowControl(QtSerialPort.QSerialPort.HardwareControl)
-        serial_conn.setStopBits(QtSerialPort.QSerialPort.OneStop)
-        serial_conn.setDataBits(QtSerialPort.QSerialPort.Data8)
-        serial_conn.setParity(QtSerialPort.QSerialPort.NoParity)
-        open_result = serial_conn.open(QtCore.QIODevice.ReadWrite)
+        config_result = self._serial_port.set_config(serial_config)
 
-        if open_result == False:
-            print(self._errors[serial_conn.error()])
+        if not config_result:
+            #print(self._serial_port.get_config_error())
+            self._shake()
+            return
 
-        # Attempt to connect to the device. If not successful shake the
-        # window.
+        open_result = self._serial_port.connect()
 
-        print(serial_config)
+        if open_result != 0:
+            self._shake()
+            #print(self._serial_port.qt_errors[open_result])
+            return
 
-        self._serial_config = serial_config
-        serial_conn.close()
         self.close()
 
-    def getSerialConfig(self):
-        return self._serial_config
+    def _shake(self):
+        """Shakes the window. Like shaking your head as in there was a problem.
+        """
+        # animation = QtCore.QPropertyAnimation(self, 'geometry')
+        # animation.setDuration(1000)
+        # animation.setStartValue(QtCore.QRect())
+        # animation.setEndValue(QtCore.QRect())
+        # animation.start()
+        print(self.pos())
+        # self.move(400, 400)
 
 
 class ConsoleWidget(QtWidgets.QWidget):
