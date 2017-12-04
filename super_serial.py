@@ -90,7 +90,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.view_menu = QtWidgets.QMenu('&View', self)
         self.menuBar().addMenu(self.view_menu)
 
-        console_action = self.view_menu.addAction('Show Console', self.showConsole,
+        self.console_action = self.view_menu.addAction('Show Console', self.showConsole,
             'Ctrl+`')
 
         self.view_menu.addSeparator()
@@ -180,8 +180,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         # https://stackoverflow.com/a/371634
         if self.console.isHidden():
             self.console.show()
+            self.console_action.setText('Hide Console')
         else:
             self.console.hide()
+            self.console_action.setText('Show Console')
 
     def _onLocalEchoAction(self):
         if self.serialConsoleWidget.local_echo_enabled:
