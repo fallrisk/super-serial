@@ -41,6 +41,7 @@ from PyQt5.Qt import QDesktopServices, QUrl
 
 import console
 import serial
+import serial_console_widget
 
 # http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html#crashes-on-exit
 app = None
@@ -106,16 +107,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         l = QtWidgets.QVBoxLayout(self.main_widget)
 
         mono_font = QtGui.QFont('Hack')
+        mono_font.setPointSize(12)
 
-        self.serialDataWidget = QtWidgets.QTextEdit()
-        self.serialDataWidget.setCurrentFont(mono_font)
-        self.serialDataWidget.setFontPointSize(12)
-        self.serialDataWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.serialConsoleWidget = serial_console_widget.SerialConsoleWidget()
+        self.serialConsoleWidget.document().setDefaultFont(mono_font)
+        self.serialConsoleWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
         self.console = ConsoleWidget()
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        splitter.addWidget(self.serialDataWidget)
+        splitter.addWidget(self.serialConsoleWidget)
         splitter.addWidget(self.console)
 
         splitter.setSizes([600, 200])
@@ -134,11 +135,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self._serial_port.closed.connect(self._onSerialClosed)
         self._serial_port.readyRead.connect(self._onSerialPortReadyRead)
 
-    def _onSerialPortReadyRead(self):
-        available = self._serial_port.bytesAvailable()
-        if available > 0:
-            data = self._serial_port.read(available)
-            self.serialDataWidget.append(data.decode('utf-8'))
+        self.serialConsoleWidget.dataWrite.connect(self._onSerConWidWrite)
 
     def fileQuit(self):
         self.close()
@@ -206,6 +203,20 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.disconnect_action.setEnabled(False)
         self.connect_action.setEnabled(True)
 
+    def _onSerConWidWrite(self, data):
+        """
+        on serial console widget write
+        """
+        b = data.encode('ascii')
+        self._serial_port.write(b)
+
+    def _onSerialPortReadyRead(self):
+        available = self._serial_port.bytesAvailable()
+        if available > 0:
+            data = self._serial_port.read(available)
+            self.serialConsoleWidget.putData(data.decode('utf-8'))
+
+
 
 class SetTitleDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -268,6 +279,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.portComboBox.addItem("COM4")
         self.portComboBox.addItem("COM5")
         self.portComboBox.addItem("COM6")
+        self.portComboBox.addItem('COM20')
         self.portComboBox.addItem('/dev/ttyACM0')
         self.portComboBox.setCurrentIndex(3)
 
@@ -275,7 +287,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
         self.baudrateLabel = QtWidgets.QLabel('Baudrate')
 
-        self.baudrateEdit = QtWidgets.QLineEdit('9600')
+        self.baudrateEdit = QtWidgets.QLineEdit('115200')
 
         self.databitsLabel = QtWidgets.QLabel('Databits')
 
@@ -310,7 +322,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.flowControlComboBox.addItem('NONE')
         self.flowControlComboBox.addItem('RTS/CTS')
         self.flowControlComboBox.addItem('XON/XOFF')
-        self.flowControlComboBox.setCurrentIndex(0)
+        self.flowControlComboBox.setCurrentIndex(1)
 
         self.cancelButton = QtWidgets.QPushButton('Cancel')
         self.connectButton = QtWidgets.QPushButton('Connect')
@@ -391,6 +403,9 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
 
 class ConsoleWidget(QtWidgets.QWidget):
+    """
+    This is a console for the application as a whole. Not for the serial port.
+    """
     def __init__(self, parent=None):
         super(ConsoleWidget, self).__init__(parent)
 
