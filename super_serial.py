@@ -22,6 +22,7 @@ References
 * https://wiki.python.org/moin/PyQt/Python%20syntax%20highlighting
 * http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html
 * https://wiki.python.org/moin/PyQt/SampleCode
+* https://www.mail-archive.com/pyqt@riverbankcomputing.com/msg16050.html
 
 """
 
@@ -119,10 +120,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         splitter.setSizes([600, 200])
 
-        self.serialDataWidget.append("hello world")
-
-        #self._serial_port.newData.connect(self.onNewSerialRead)
-
         l.addWidget(splitter)
 
         self.main_widget.setFocus()
@@ -131,10 +128,17 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.connectionLabel = QtWidgets.QLabel('Disconnected')
 
         self.statusBar().addWidget(self.connectionLabel)
-        self._serial_port.connected.connect(self._on_serial_connection)
-        self._serial_port.disconnected.connect(self._on_serial_disconnection)
-
         self.console.hide()
+
+        self._serial_port.opened.connect(self._onSerialOpened)
+        self._serial_port.closed.connect(self._onSerialClosed)
+        self._serial_port.readyRead.connect(self._onSerialPortReadyRead)
+
+    def _onSerialPortReadyRead(self):
+        available = self._serial_port.bytesAvailable()
+        if available > 0:
+            data = self._serial_port.read(available)
+            self.serialDataWidget.append(data.decode('utf-8'))
 
     def fileQuit(self):
         self.close()
@@ -192,18 +196,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             event.ignore()
 
-    def _on_serial_connection(self):
-        self.connectionLabel.setText('Connected: ' + self._serial_port.config_to_str())
+    def _onSerialOpened(self):
+        self.connectionLabel.setText('Connected: ' + self._serial_port.configToStr())
         self.disconnect_action.setEnabled(True)
         self.connect_action.setEnabled(False)
 
-    def _on_serial_disconnection(self):
+    def _onSerialClosed(self):
         self.connectionLabel.setText('Disconnected')
         self.disconnect_action.setEnabled(False)
         self.connect_action.setEnabled(True)
-
-    def onNewSerialRead(self):
-        self.serialDataWidget.append()
 
 
 class SetTitleDialog(QtWidgets.QDialog):
@@ -255,7 +256,6 @@ class SerialConfigDialog(QtWidgets.QDialog):
         super(SerialConfigDialog, self).__init__(parent)
         # Memory Leaks with Dialogs https://stackoverflow.com/a/37928086
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self._serial_config = None
         self._serial_port = serial_port
         self.setWindowTitle('Set Window Title')
         # https://doc.qt.io/qt-5/qt.html
@@ -317,8 +317,8 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.saveButton = QtWidgets.QPushButton('Save')
         self.loadButton = QtWidgets.QPushButton('Load')
 
-        self.cancelButton.clicked.connect(self.cancel)
-        self.connectButton.clicked.connect(self.connect)
+        self.cancelButton.clicked.connect(self._onCancel)
+        self.connectButton.clicked.connect(self._onConnect)
 
         # http://www.bogotobogo.com/Qt/Qt5_GridLayout.php
         layout = QtWidgets.QGridLayout()
@@ -351,11 +351,10 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.setLayout(layout)
         self.adjustSize()
 
-    def cancel(self):
-        self._serial_config = None
+    def _onCancel(self):
         self.close()
 
-    def connect(self):
+    def _onConnect(self):
         serial_config = {
             'port': self.portComboBox.currentText(),
             'baudrate': int(self.baudrateEdit.text()),
@@ -365,18 +364,16 @@ class SerialConfigDialog(QtWidgets.QDialog):
             'flow_control': self.flowControlComboBox.currentText()
         }
 
-        config_result = self._serial_port.set_config(serial_config)
+        config_result = self._serial_port.setConfig(serial_config)
 
         if not config_result:
-            #print(self._serial_port.get_config_error())
             self._shake()
             return
 
-        open_result = self._serial_port.connect()
+        open_result = self._serial_port.open()
 
         if open_result != 0:
             self._shake()
-            #print(self._serial_port.qt_errors[open_result])
             return
 
         self.close()
