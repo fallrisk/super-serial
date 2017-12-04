@@ -70,6 +70,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #self.setGeometry(200, 200, 800, 480)
         self.resize(800, 480)
 
+        with open('style.qss', encoding='utf-8') as style_file:
+            self.setStyleSheet(style_file.read())
+
         self.super_serial_menu = QtWidgets.QMenu('&Super Serial', self)
         self.menuBar().addMenu(self.super_serial_menu)
 
@@ -110,6 +113,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.main_widget = QtWidgets.QWidget(self)
 
         l = QtWidgets.QVBoxLayout(self.main_widget)
+        # Remove the space outlining the widgets.
+        l.setContentsMargins(0, 0, 0, 0)
 
         mono_font = QtGui.QFont('Hack')
         mono_font.setPointSize(12)
@@ -127,6 +132,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         splitter.setSizes([600, 200])
 
         l.addWidget(splitter)
+        l.setSpacing(0)
 
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
@@ -430,6 +436,9 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.consoleOutput.setReadOnly(True)
 
         layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
         layout.addWidget(self.consoleOutput)
         layout.addWidget(self.consoleInput)
 
