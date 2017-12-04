@@ -8,7 +8,8 @@ class SerialConsoleWidget(QtWidgets.QPlainTextEdit):
 
     def __init__(self, parent=None):
         super(SerialConsoleWidget, self).__init__(parent)
-        self.local_echo_enabled = True
+        self.local_echo_enabled = False
+        self.setWordWrapMode(QtGui.QTextOption.NoWrap)
 
     def keyPressEvent(self, event):
         ignore_keys = [QtCore.Qt.Key_Left, QtCore.Qt.Key_Right,

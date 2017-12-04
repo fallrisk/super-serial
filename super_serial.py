@@ -93,6 +93,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         console_action = self.view_menu.addAction('Show Console', self.showConsole,
             'Ctrl+`')
 
+        self.view_menu.addSeparator()
+        self.local_echo_action = self.view_menu.addAction('Enable Local Echo', self._onLocalEchoAction)
+        self.local_echo_action.setCheckable(True)
+        self.local_echo_action.setChecked(False)
+
         self.help_menu = QtWidgets.QMenu('&Help', self)
         self.menuBar().addSeparator()
         self.menuBar().addMenu(self.help_menu)
@@ -177,6 +182,14 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.console.show()
         else:
             self.console.hide()
+
+    def _onLocalEchoAction(self):
+        if self.serialConsoleWidget.local_echo_enabled:
+            self.serialConsoleWidget.local_echo_enabled = False
+            self.local_echo_action.setChecked(False)
+        else:
+            self.serialConsoleWidget.local_echo_enabled = True
+            self.local_echo_action.setChecked(True)
 
     def closeEvent(self, event):
         # This method is overriding the event 'close'.
