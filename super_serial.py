@@ -111,7 +111,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialDataWidget.setCurrentFont(mono_font)
         self.serialDataWidget.setFontPointSize(12)
         self.serialDataWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-        # self.console = QtWidgets.QTextEdit()
+
         self.console = ConsoleWidget()
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)

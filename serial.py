@@ -170,7 +170,7 @@ class SerialPort(QtSerialPort.QSerialPort):
         elif c['parity'] == 'MARK':
             s += ' Mark'
         else:
-            s += ' Unk'
+            s += ' Unk' # Unknown
 
         if c['flow_control'] == 'NONE':
             s += ' None'
@@ -179,7 +179,7 @@ class SerialPort(QtSerialPort.QSerialPort):
         elif c['flow_control'] == 'RTS/CTS':
             s += ' RTS/CTS'
         else:
-            s += ' Unk;'
+            s += ' Unk' # Unknown
 
         return s
 
