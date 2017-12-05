@@ -27,14 +27,9 @@ References
 """
 
 import argparse
-from enum import Enum
-import io
-import json
 import os
 import os.path as osp
-import re
 import sys
-
 from types import CodeType
 
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -52,23 +47,27 @@ __author__ = 'Justin Watson'
 __version__ = 'v0.1.0'
 
 class ApplicationWindow(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, args):
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Super Serial")
 
-        preferenes_file = os.getcwd() + osp.sep + 'preferences.json'
-        preferences.load(preferenes_file)
-
         self.consoleWidget = ConsoleWidget()
         console.messages.newMsg.connect(self._onNewConsoleMsg)
-        console.enqueue('version: {}'.format(__version__))
-        console.enqueue('executable path: {}'.format(osp.realpath(__file__)))
-        console.enqueue('working dir: {}'.format(os.getcwd()))
-        console.enqueue('loaded preferences file: {}'.format(preferenes_file))
+
+        preferenes_file = os.getcwd() + osp.sep + 'preferences.json'
+        if args.preferences is not None:
+            preferenes_file = args.preferences
+        preferences.load(preferenes_file)
+
+        console.enqueue('Version: {}'.format(__version__))
+        console.enqueue('Executable Path: {}'.format(osp.realpath(__file__)))
+        console.enqueue('Working Directory: {}'.format(os.getcwd()))
+        console.enqueue('Loaded preferences file: {}'.format(preferenes_file))
 
         # Subscribe to preferences file update events.
-        preferences.subscribe(self._onPrefsUpdate)
+        #preferences.subscribe(self._onPrefsUpdate)
+        # preferences.prefsUpdated.connect(self._onPrefsUpdate)
 
         # The serial port class manages all the serial port.
         # It creates a thread to hold the data. It handles
@@ -129,7 +128,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         # Remove the space outlining the widgets.
         l.setContentsMargins(0, 0, 0, 0)
 
-        mono_font = QtGui.QFont(preferences.get('font_name'))
+        mono_font = QtGui.QFont(preferences.get('font_face'))
         mono_font.setPointSize(int(preferences.get('font_size')))
 
         self.consoleWidget.setFont(mono_font)
@@ -215,7 +214,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         # This method is overriding the event 'close'.
 
-        if not preferences['prompt_on_quit']:
+        if not preferences.get('prompt_on_quit'):
             return
 
         quit_msg = "Are you sure you want to exit Super Serial?"
@@ -254,7 +253,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.consoleWidget.consoleOutput.append(console.dequeue())
 
     def _onPrefsUpdate(self):
-        mono_font = QtGui.QFont(preferences.get('font_name'))
+        print('Updating font.')
+        print(int(preferences.get('font_size')))
+        mono_font = QtGui.QFont(preferences.get('font_face'))
         mono_font.setPointSize(int(preferences.get('font_size')))
         self.consoleWidget.setFont(mono_font)
         self.serialConsoleWidget.document().setDefaultFont(mono_font)
@@ -488,9 +489,9 @@ class ConsoleWidget(QtWidgets.QWidget):
 
 def main():
     global app
-    global preferences
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--preferences', help='Specify a preferences file instead of the default.')
     parser.add_argument('--version', action='version', version=__version__)
 
     args = parser.parse_args()
@@ -501,7 +502,7 @@ def main():
     app_icon = QtGui.QIcon(script_dir + osp.sep + 'super_serial_64x64.ico')
     app.setWindowIcon(app_icon)
 
-    aw = ApplicationWindow()
+    aw = ApplicationWindow(args)
     aw.show()
 
     app.exec()
