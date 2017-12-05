@@ -329,6 +329,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.portComboBox.addItem('COM20')
         self.portComboBox.addItem('/dev/ttyACM0')
         self.portComboBox.setCurrentIndex(3)
+        self.portComboBox.setEditable(True)
 
         self.scanComsButton = QtWidgets.QPushButton('Scan COMs')
         self.scanComsButton.clicked.connect(self._onScanComs)
