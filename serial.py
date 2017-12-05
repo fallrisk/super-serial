@@ -14,6 +14,7 @@ Copyright 2017 Justin Watson
    limitations under the License.
 """
 
+from datetime import datetime
 import queue
 import threading
 import time
@@ -52,7 +53,6 @@ class SerialPort(QtSerialPort.QSerialPort):
         self._config_error = ''
         # The dictionary used for successful configuration.
         self._serial_config = None
-        console.messages.enqueue('Hello from SerialPort')
         self.is_connected = False
 
     def open(self):
@@ -71,10 +71,14 @@ class SerialPort(QtSerialPort.QSerialPort):
         # Indicate we have a new connection.
         self.opened.emit()
         self.is_connected = True
+        console.enqueue('Connected to device {} at {:%d %b. %Y %H:%M:%S}.'.format(
+            self._serial_config['port'], datetime.now()))
         return 0
 
     def close(self):
         super(SerialPort, self).close()
+        console.enqueue('Disconnected from device {} at {:%d %b. %Y %H:%M:%S}.'.format(
+            self._serial_config['port'], datetime.now()))
         self.closed.emit()
 
     def setConfig(self, config):
