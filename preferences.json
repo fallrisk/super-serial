@@ -5,7 +5,7 @@
   // used.
   "font_face": "Operator Mono",
   // Only values from 8 to 22 are allowed.
-  "font_size": 10,
+  "font_size": 11,
   // Do you want a confirmation when you quit the program?
   "prompt_on_quit": false
 }

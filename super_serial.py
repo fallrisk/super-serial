@@ -55,6 +55,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.consoleWidget = ConsoleWidget()
         console.messages.newMsg.connect(self._onNewConsoleMsg)
 
+        self._watcher = QtCore.QFileSystemWatcher()
+        preferences.setWatcher(self._watcher)
+
         preferenes_file = os.getcwd() + osp.sep + 'preferences.json'
         if args.preferences is not None:
             preferenes_file = args.preferences
@@ -66,7 +69,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         console.enqueue('Loaded preferences file: {}'.format(preferenes_file))
 
         # Subscribe to preferences file update events.
-        #preferences.subscribe(self._onPrefsUpdate)
+        preferences.subscribe(self._onPrefsUpdate)
         # preferences.prefsUpdated.connect(self._onPrefsUpdate)
 
         # The serial port class manages all the serial port.
@@ -253,8 +256,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.consoleWidget.consoleOutput.append(console.dequeue())
 
     def _onPrefsUpdate(self):
-        print('Updating font.')
-        print(int(preferences.get('font_size')))
         mono_font = QtGui.QFont(preferences.get('font_face'))
         mono_font.setPointSize(int(preferences.get('font_size')))
         self.consoleWidget.setFont(mono_font)
@@ -485,6 +486,10 @@ class ConsoleWidget(QtWidgets.QWidget):
 
         self.consoleOutput.append('>>> ' + user_input)
         self.consoleOutput.append(output[:-1])
+
+    def setFont(self, font):
+        self.consoleOutput.setFont(font)
+        self.consoleInput.setFont(font)
 
 
 def main():
