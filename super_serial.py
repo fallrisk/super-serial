@@ -41,14 +41,12 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.Qt import QDesktopServices, QUrl
 
 import console
+import preferences
 import serial
 import serial_console_widget
 
 # http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html#crashes-on-exit
 app = None
-
-# TODO: Set to default preferences.
-preferences = None
 
 __author__ = 'Justin Watson'
 __version__ = 'v0.1.0'
@@ -59,11 +57,18 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Super Serial")
 
+        preferenes_file = os.getcwd() + osp.sep + 'preferences.json'
+        preferences.load(preferenes_file)
+
         self.consoleWidget = ConsoleWidget()
         console.messages.newMsg.connect(self._onNewConsoleMsg)
         console.enqueue('version: {}'.format(__version__))
         console.enqueue('executable path: {}'.format(osp.realpath(__file__)))
         console.enqueue('working dir: {}'.format(os.getcwd()))
+        console.enqueue('loaded preferences file: {}'.format(preferenes_file))
+
+        # Subscribe to preferences file update events.
+        preferences.subscribe(self._onPrefsUpdate)
 
         # The serial port class manages all the serial port.
         # It creates a thread to hold the data. It handles
@@ -124,8 +129,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         # Remove the space outlining the widgets.
         l.setContentsMargins(0, 0, 0, 0)
 
-        mono_font = QtGui.QFont('Hack')
-        mono_font.setPointSize(11)
+        mono_font = QtGui.QFont(preferences.get('font_name'))
+        mono_font.setPointSize(int(preferences.get('font_size')))
 
         self.consoleWidget.setFont(mono_font)
 
@@ -247,6 +252,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def _onNewConsoleMsg(self):
         self.consoleWidget.consoleOutput.append(console.dequeue())
+
+    def _onPrefsUpdate(self):
+        mono_font = QtGui.QFont(preferences.get('font_name'))
+        mono_font.setPointSize(int(preferences.get('font_size')))
+        self.consoleWidget.setFont(mono_font)
+        self.serialConsoleWidget.document().setDefaultFont(mono_font)
 
 
 
@@ -483,16 +494,6 @@ def main():
     parser.add_argument('--version', action='version', version=__version__)
 
     args = parser.parse_args()
-
-    # Load the preferences file.
-    with open('preferences.json', encoding='utf-8') as data_file:
-        contents = data_file.read()
-        # Remove all comments that start with "//".
-        contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
-        # Remove blank lines.
-        contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
-
-        preferences = json.loads(contents)
 
     app = QtWidgets.QApplication(sys.argv)
 
