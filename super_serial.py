@@ -125,7 +125,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         l.setContentsMargins(0, 0, 0, 0)
 
         mono_font = QtGui.QFont('Hack')
-        mono_font.setPointSize(12)
+        mono_font.setPointSize(11)
+
+        self.consoleWidget.setFont(mono_font)
 
         self.serialConsoleWidget = serial_console_widget.SerialConsoleWidget()
         self.serialConsoleWidget.document().setDefaultFont(mono_font)
