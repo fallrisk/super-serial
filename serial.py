@@ -79,6 +79,7 @@ class SerialPort(QtSerialPort.QSerialPort):
         super(SerialPort, self).close()
         console.enqueue('Disconnected from device {} at {:%d %b. %Y %H:%M:%S}.'.format(
             self._serial_config['port'], datetime.now()))
+        self.is_connected = False
         self.closed.emit()
 
     def setConfig(self, config):

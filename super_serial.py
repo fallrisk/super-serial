@@ -244,7 +244,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         on serial console widget write
         """
         b = data.encode('ascii')
-        self._serial_port.write(b)
+        if self._serial_port.is_connected:
+            self._serial_port.write(b)
 
     def _onSerialPortReadyRead(self):
         available = self._serial_port.bytesAvailable()
