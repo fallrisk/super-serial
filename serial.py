@@ -20,7 +20,7 @@ import time
 
 from PyQt5 import QtCore, QtSerialPort
 
-#import console
+import console
 
 class SerialPort(QtSerialPort.QSerialPort):
 
@@ -52,7 +52,7 @@ class SerialPort(QtSerialPort.QSerialPort):
         self._config_error = ''
         # The dictionary used for successful configuration.
         self._serial_config = None
-
+        console.messages.enqueue('Hello from SerialPort')
         self.is_connected = False
 
     def open(self):

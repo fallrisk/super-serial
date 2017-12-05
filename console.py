@@ -17,6 +17,9 @@ Copyright 2017 Justin Watson
 from code import InteractiveConsole
 import sys
 
+from PyQt5 import QtCore
+
+
 class SimpleStream:
     def __init__(self):
         self.reset()
@@ -31,6 +34,7 @@ class SimpleStream:
         output = '\n'.join(self.out)
         self.reset()
         return output
+
 
 class RemoteConsole(InteractiveConsole):
     def __init__(self):
@@ -67,10 +71,36 @@ class RemoteConsole(InteractiveConsole):
         return self._result
 
 
-class ConsoleMessageManager:
-    def __init__(self):
-        pass
+# The following is a singleton for handling console messages.
+# Any QtObject can use these functions to pass messages to the console.
+# This removes having to pass the console object into every object, widget,
+# function, etc.
+#
+# https://stackoverflow.com/a/6760821
+#
 
-    def append(self, msg):
-        pass
+class ConsoleMsgHandler(QtCore.QObject):
 
+    _messages = []
+
+    newMsg = QtCore.pyqtSignal()
+
+    def enqueue(self, msg):
+        self._messages.append(msg)
+        self.newMsg.emit()
+
+    def dequeue(self):
+        return self._messages.pop(0)
+
+
+messages = ConsoleMsgHandler()
+
+
+def enqueue(msg):
+    global messages
+    messages.enqueue(msg)
+
+
+def dequeue():
+    global messages
+    return messages.dequeue()

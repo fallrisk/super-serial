@@ -30,6 +30,7 @@ import argparse
 from enum import Enum
 import io
 import json
+import os
 import os.path as osp
 import re
 import sys
@@ -49,13 +50,20 @@ app = None
 # TODO: Set to default preferences.
 preferences = None
 
-_super_serial_version = 'v0.1.0'
+__author__ = 'Justin Watson'
+__version__ = 'v0.1.0'
 
 class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Super Serial")
+
+        self.consoleWidget = ConsoleWidget()
+        console.messages.newMsg.connect(self._onNewConsoleMsg)
+        console.enqueue('version: {}'.format(__version__))
+        console.enqueue('executable path: {}'.format(osp.realpath(__file__)))
+        console.enqueue('working dir: {}'.format(os.getcwd()))
 
         # The serial port class manages all the serial port.
         # It creates a thread to hold the data. It handles
@@ -123,11 +131,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialConsoleWidget.document().setDefaultFont(mono_font)
         self.serialConsoleWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
-        self.console = ConsoleWidget()
-
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         splitter.addWidget(self.serialConsoleWidget)
-        splitter.addWidget(self.console)
+        splitter.addWidget(self.consoleWidget)
 
         splitter.setSizes([600, 200])
 
@@ -140,7 +146,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.connectionLabel = QtWidgets.QLabel('Disconnected')
 
         self.statusBar().addWidget(self.connectionLabel)
-        self.console.hide()
+        self.consoleWidget.hide()
 
         self._serial_port.opened.connect(self._onSerialOpened)
         self._serial_port.closed.connect(self._onSerialClosed)
@@ -156,7 +162,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def about(self):
         QtWidgets.QMessageBox.about(self, 'Super Serial',
-            'Copyright 2017 Justin Watson\r\nSuper Serial\r\nVersion: {}'.format(_super_serial_version))
+            'Copyright 2017 Justin Watson\r\nSuper Serial\r\nVersion: {}'.format(__version__))
 
     def webpage(self):
         url = QUrl('http://superserial.io')
@@ -184,11 +190,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def showConsole(self):
         # To make the console not viewable...
         # https://stackoverflow.com/a/371634
-        if self.console.isHidden():
-            self.console.show()
+        if self.consoleWidget.isHidden():
+            self.consoleWidget.show()
             self.console_action.setText('Hide Console')
         else:
-            self.console.hide()
+            self.consoleWidget.hide()
             self.console_action.setText('Show Console')
 
     def _onLocalEchoAction(self):
@@ -236,6 +242,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if available > 0:
             data = self._serial_port.read(available)
             self.serialConsoleWidget.putData(data.decode('utf-8'))
+
+    def _onNewConsoleMsg(self):
+        self.consoleWidget.consoleOutput.append(console.dequeue())
 
 
 
@@ -300,6 +309,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.portComboBox.addItem("COM4")
         self.portComboBox.addItem("COM5")
         self.portComboBox.addItem("COM6")
+        self.portComboBox.addItem('COM21')
         self.portComboBox.addItem('COM20')
         self.portComboBox.addItem('/dev/ttyACM0')
         self.portComboBox.setCurrentIndex(3)
@@ -468,7 +478,7 @@ def main():
     global preferences
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--version', action='version', version=_super_serial_version)
+    parser.add_argument('--version', action='version', version=__version__)
 
     args = parser.parse_args()
 
