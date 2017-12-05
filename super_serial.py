@@ -330,6 +330,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.portComboBox.setCurrentIndex(3)
 
         self.scanComsButton = QtWidgets.QPushButton('Scan COMs')
+        self.scanComsButton.clicked.connect(self._onScanComs)
 
         self.baudrateLabel = QtWidgets.QLabel('Baudrate')
 
@@ -435,6 +436,14 @@ class SerialConfigDialog(QtWidgets.QDialog):
             return
 
         self.close()
+
+    def _onScanComs(self):
+        available_ports = self._serial_port.scanComs()
+        if len(available_ports) > 0:
+            self.portComboBox.clear()
+            for port in available_ports:
+                self.portComboBox.addItem(port.portName())
+
 
     def _shake(self):
         """Shakes the window. Like shaking your head as in there was a problem.

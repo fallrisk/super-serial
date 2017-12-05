@@ -189,4 +189,5 @@ class SerialPort(QtSerialPort.QSerialPort):
 
     def scanComs(self):
         # http://doc.qt.io/qt-5/qserialportinfo.html#availablePorts
-        pass
+        available_ports = QtSerialPort.QSerialPortInfo.availablePorts()
+        return available_ports
