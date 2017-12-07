@@ -30,7 +30,6 @@ import argparse
 import os
 import os.path as osp
 import sys
-from types import CodeType
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.Qt import QDesktopServices, QUrl
@@ -116,6 +115,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.local_echo_action.setCheckable(True)
         self.local_echo_action.setChecked(False)
 
+        self.show_crlf_action = self.view_menu.addAction('Show CR and LF', self._onShowCrLfAction)
+
         self.help_menu = QtWidgets.QMenu('&Help', self)
         self.menuBar().addSeparator()
         self.menuBar().addMenu(self.help_menu)
@@ -144,7 +145,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         splitter.addWidget(self.serialConsoleWidget)
         splitter.addWidget(self.consoleWidget)
 
-        splitter.setSizes([600, 200])
+        splitter.setSizes([500, 300])
 
         l.addWidget(splitter)
         l.setSpacing(0)
@@ -162,6 +163,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self._serial_port.readyRead.connect(self._onSerialPortReadyRead)
 
         self.serialConsoleWidget.dataWrite.connect(self._onSerConWidWrite)
+
+        # Register the control character text object.
+        controlCharInterface = serial_console_widget.ControlCharObject(self)
+        self.serialConsoleWidget.document().documentLayout().registerHandler(
+            serial_console_widget.ControlCharFormat, controlCharInterface)
 
     def fileQuit(self):
         self.close()
@@ -205,6 +211,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             self.consoleWidget.hide()
             self.console_action.setText('Show Console')
+
+    def _onShowCrLfAction(self):
+        if self.serialConsoleWidget.show_crlf:
+            self.serialConsoleWidget.show_crlf = False
+            self.show_crlf_action.setText('Hide CR and LF')
+        else:
+            self.serialConsoleWidget.show_crlf = True
+            self.show_crlf_action.setText('Show CR and LF')
+        self.serialConsoleWidget.repaint()
 
     def _onLocalEchoAction(self):
         if self.serialConsoleWidget.local_echo_enabled:
