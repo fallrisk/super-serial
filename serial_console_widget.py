@@ -16,7 +16,7 @@ Copyright 2017 Justin Watson
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-class SerialConsoleWidget(QtWidgets.QTextEdit):
+class SerialConsoleWidget(QtWidgets.QPlainTextEdit):
 
     dataWrite = QtCore.pyqtSignal(str)
 
@@ -26,7 +26,12 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
         self.setWordWrapMode(QtGui.QTextOption.NoWrap)
         self.ccp = ControlCharPainter()
         self.ccp.setTextEdit(self)
-        self.ruler = Ruler(self)
+        #self.ruler = Ruler(self)
+        #self.my_layout = SuperTextLayout(self.document())
+        #self.document().setDocumentLayout(SuperTextLayout(self.document()))
+
+        #layout = SuperTextLayout(self.document())
+        #self.document().setDocumentLayout(layout)
 
     def keyPressEvent(self, event):
         ignore_keys = [QtCore.Qt.Key_Left, QtCore.Qt.Key_Right,
@@ -42,49 +47,12 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
         vbar = self.verticalScrollBar()
         vbar.setValue(vbar.maximum())
 
-    def paintEvent(self, event):
-        margin = 10
-        text_layout = QtGui.QTextLayout('The above example demonstrates how simple it is to quickly generate new rich text documents using a minimum amount of code. Although we have generated a crude fixed-pitch calendar to avoid quoting too much code, Scribe provides much more sophisticated layout and formatting features.', self.font())
-        fm = QtGui.QFontMetrics(self.font())
-        line_height = fm.height()
-        y = 0
-        radius = min(self.width() / 2.0, self.height() / 2.0) - margin
-
-        text_layout.beginLayout()
-        while True:
-            line = text_layout.createLine()
-            if not line.isValid():
-                break
-
-            x1 = max(0.0, pow(pow(radius, 2) - pow(radius - y, 2), 0.5))
-            x2 = max(0.0, pow(pow(radius, 2) - pow(radius - (y + line_height), 2), 0.5))
-            x = max(x1, x2) + margin
-            line_width = (self.width() - margin) - x
-
-            line.setLineWidth(line_width)
-            line.setPosition(QtCore.QPointF(x, margin + y))
-            y += line.height()
-
-        text_layout.endLayout()
-
-        painter = QtGui.QPainter(self)
-        painter.begin(self)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.fillRect(self.rect(), QtCore.Qt.white)
-        painter.setBrush(QtGui.QBrush(QtCore.Qt.black))
-        painter.setPen(QtGui.QPen(QtCore.Qt.black))
-        text_layout.draw(painter, QtCore.QPoint(0, 0))
-
-        painter.setBrush(QtGui.QBrush(QtGui.QColor('#a6ce39')))
-        painter.setPen(QtGui.QPen(QtCore.Qt.black))
-        painter.drawEllipse(QtCore.QRectF(-radius, margin, 2 * radius, 2 * radius))
-        painter.end()
-
 
 class ControlCharPainter(QtCore.QObject):
 
     def _onContentsChange(self, position, chars_removed, chars_added):
         print('contents changed {} {} {}'.format(position, chars_removed, chars_added))
+        print(self._text_edit_widget.document().documentLayout())
 
     def setTextEdit(self, text_edit_widget):
         self._text_edit_widget = text_edit_widget
@@ -106,10 +74,28 @@ class Ruler(QtWidgets.QWidget):
         painter.drawLine(x, 0, x, size.height())
 
 
-class SuperTextLayout(QtGui.QTextLayout):
-    def draw(self, p, pos, selection):
+class SuperTextLayout(QtWidgets.QPlainTextDocumentLayout):
+    def draw(self, p, pos, selections, clip):
         # After the regualr draw has completed. I iterate through the text to
         # see if there were any control characters. If there were then I draw
         # draw a rectangle over that area. That previously had a char. or blank in it.
         # This limits my drawing space, but doesn't break anything.
-        pass
+        super(SuperTextLayout, self).draw(p, pos, selections, clip)
+        print('draw')
+
+    def draw(p, paint_context):
+        print('draw2')
+
+
+class SuperRawFont(QtGui.QRawFont):
+    def pathForGlyph(glyphIndex):
+        # if glyphIndex <= 31:
+        #     #return my custom path
+        #     # http://doc.qt.io/qt-5/qpainterpath.html#addText
+        #     rectangle = QRectF()
+        #     path = QPainterPath()
+        #     path.addRect(rectangle)
+        #     print('here')
+        # else:
+        print('here')
+        return super(SuperRawFont, self).pathForGlyph(glyphIndex)

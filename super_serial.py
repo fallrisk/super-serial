@@ -134,7 +134,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         mono_font = QtGui.QFont(preferences.get('font_face'))
         mono_font.setPointSize(int(preferences.get('font_size')))
 
-        self.consoleWidget.setFont(mono_font)
+        self.ssc_font = serial_console_widget.SuperRawFont.fromFont(mono_font)
+
+        #self.consoleWidget.setFont(mono_font)
+        self.consoleWidget.setFont(self.ssc_font)
 
         self.serialConsoleWidget = serial_console_widget.SerialConsoleWidget()
         self.serialConsoleWidget.document().setDefaultFont(mono_font)
