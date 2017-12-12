@@ -29,6 +29,14 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
         self.local_echo_enabled = False
         self.setWordWrapMode(QtGui.QTextOption.NoWrap)
         self.show_crlf = False
+        self.ccp = ControlCharPainter()
+        self.ccp.setTextEdit(self)
+        #self.ruler = Ruler(self)
+        #self.my_layout = SuperTextLayout(self.document())
+        #self.document().setDocumentLayout(SuperTextLayout(self.document()))
+
+        #layout = SuperTextLayout(self.document())
+        #self.document().setDocumentLayout(layout)
 
     def keyPressEvent(self, event):
         ignore_keys = [QtCore.Qt.Key_Left, QtCore.Qt.Key_Right,
@@ -40,29 +48,29 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
         self.dataWrite.emit(event.text())
 
     def putData(self, data):
-        for c in data:
-            if not self.show_crlf:
-                self.insertPlainText(c)
-                continue
-            if c == '\n' or c == '\r':
-                ctrlCharFormat = QtGui.QTextCharFormat()
-                ctrlCharFormat.setObjectType(ControlCharFormat)
-                ctrlCharFormat.setProperty(1, ord(c))
-                orc = chr(0xfffc)
-                cursor = self.textCursor()
-                cursor.insertText(orc, ctrlCharFormat)
-                self.setTextCursor(cursor)
-                self.insertPlainText(c)
-            elif ord(c) < 0x20:
-                ctrlCharFormat = QtGui.QTextCharFormat()
-                ctrlCharFormat.setObjectType(ControlCharFormat)
-                ctrlCharFormat.setProperty(1, ord(c))
-                orc = chr(0xfffc)
-                cursor = self.textCursor()
-                cursor.insertText(orc, ctrlCharFormat)
-                self.setTextCursor(cursor)
-            else:
-                self.insertPlainText(c)
+        # for c in data:
+        #     if not self.show_crlf:
+        #         self.insertPlainText(c)
+        #         continue
+        #     if c == '\n' or c == '\r':
+        #         ctrlCharFormat = QtGui.QTextCharFormat()
+        #         ctrlCharFormat.setObjectType(ControlCharFormat)
+        #         ctrlCharFormat.setProperty(1, ord(c))
+        #         orc = chr(0xfffc)
+        #         cursor = self.textCursor()
+        #         cursor.insertText(orc, ctrlCharFormat)
+        #         self.setTextCursor(cursor)
+        #         self.insertPlainText(c)
+        #     elif ord(c) < 0x20:
+        #         ctrlCharFormat = QtGui.QTextCharFormat()
+        #         ctrlCharFormat.setObjectType(ControlCharFormat)
+        #         ctrlCharFormat.setProperty(1, ord(c))
+        #         orc = chr(0xfffc)
+        #         cursor = self.textCursor()
+        #         cursor.insertText(orc, ctrlCharFormat)
+        #         self.setTextCursor(cursor)
+        #     else:
+        self.insertPlainText(c)
         vbar = self.verticalScrollBar()
         vbar.setValue(vbar.maximum())
 
@@ -78,3 +86,57 @@ class ControlCharObject(QtCore.QObject, QtGui.QTextObjectInterface):
         x = format.property(1)
         #print('char is 0x{:0x}'.format(x))
         painter.drawRect(QtCore.QRect(rect.x(), rect.y(), 10, 10))
+
+
+class ControlCharPainter(QtCore.QObject):
+
+    def _onContentsChange(self, position, chars_removed, chars_added):
+        print('contents changed {} {} {}'.format(position, chars_removed, chars_added))
+        print(self._text_edit_widget.document().documentLayout())
+
+    def setTextEdit(self, text_edit_widget):
+        self._text_edit_widget = text_edit_widget
+        self._text_edit_widget.document().contentsChange.connect(self._onContentsChange)
+
+
+class Ruler(QtWidgets.QWidget):
+
+    def __init__(self, parent):
+        super(Ruler, self).__init__(parent)
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        size = QtCore.QSizeF(4, 20)
+        color = QtGui.QColor(QtCore.Qt.darkGray)
+        color.setAlphaF(.5)
+        painter.setPen(color)
+        x = 40
+        painter.drawLine(x, 0, x, size.height())
+
+
+class SuperTextLayout(QtWidgets.QPlainTextDocumentLayout):
+    def draw(self, p, pos, selections, clip):
+        # After the regualr draw has completed. I iterate through the text to
+        # see if there were any control characters. If there were then I draw
+        # draw a rectangle over that area. That previously had a char. or blank in it.
+        # This limits my drawing space, but doesn't break anything.
+        super(SuperTextLayout, self).draw(p, pos, selections, clip)
+        print('draw')
+
+    def draw(p, paint_context):
+        print('draw2')
+
+
+class SuperRawFont(QtGui.QRawFont):
+    def pathForGlyph(glyphIndex):
+        # if glyphIndex <= 31:
+        #     #return my custom path
+        #     # http://doc.qt.io/qt-5/qpainterpath.html#addText
+        #     rectangle = QRectF()
+        #     path = QPainterPath()
+        #     path.addRect(rectangle)
+        #     print('here')
+        # else:
+        print('here')
+        return super(SuperRawFont, self).pathForGlyph(glyphIndex)
+
