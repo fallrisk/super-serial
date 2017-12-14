@@ -484,6 +484,8 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.consoleOutput = QtWidgets.QTextEdit()
         self.consoleInput = QtWidgets.QLineEdit()
 
+        self.consoleOutput.setWordWrapMode(QtGui.QTextOption.NoWrap)
+
         self.consoleOutput.setReadOnly(True)
 
         layout = QtWidgets.QVBoxLayout()
