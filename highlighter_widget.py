@@ -28,11 +28,22 @@ class SmallButton(QtWidgets.QPushButton):
         else:
             self.setToolTip(self.tip_text)
 
+    def enterEvent(self, event):
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        super(SmallButton, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setCursor(QtCore.Qt.ArrowCursor)
+        super(SmallButton, self).leaveEvent(event)
+
     def sizeHint(self):
         return QtCore.QSize(32, 26)
 
 
 class HighlighterWidget(QtWidgets.QWidget):
+
+    enabled = QtCore.pyqtSignal()
+
     def __init__(self, parent=None, config=None):
         super(HighlighterWidget, self).__init__(parent)
         layout = QtWidgets.QHBoxLayout()
@@ -51,12 +62,12 @@ class HighlighterWidget(QtWidgets.QWidget):
         else:
             self._config = config
 
-        self.__color_button = SmallButton('', 'Select highlight color.')
+        self.__color_button = mcw.ColorButton(self, self._config['color'])
         self.__color_button.clicked.connect(self._onColorButtonClick)
         self.__case_sensitive_button = SmallButton('Bb', 'Make case sensitive.',
             None, True, 'Make case insensitive.')
         self.__regex_line_edit = QtWidgets.QLineEdit()
-        self.__regex_line_edit.setMinimumHeight(26)
+        self.__regex_line_edit.setMinimumHeight(24)
         self.__regex_line_edit.setPlaceholderText('Regular Expresssion')
         self.__enable_button = SmallButton('', 'Enable highlighter',
             None, True, 'Disable highlighter.')
@@ -73,9 +84,8 @@ class HighlighterWidget(QtWidgets.QWidget):
     def applyConfig(self, config):
         # TODO: Check the config for the correct keys. If it doesn't have the
         # correct keys then throw an exception.
-
         self.__color_button.setStyleSheet(
-            'background-color: {}; border: none;'.format(config['color']))
+            'background-color: {};'.format(config['color']))
         if config['enabled']:
             self.__enable_button.setChecked(True)
         else:
@@ -87,28 +97,49 @@ class HighlighterWidget(QtWidgets.QWidget):
         self.__regex_line_edit.setText(config['regex'])
         self._config = config
 
-
     def _onColorButtonClick(self):
-        dialog = mcw.MaterialColorDialog(self.parent())
+        dialog = mcw.MaterialColorDialog()
         dialog.setModal(True)
         dialog.show()
         dialog.exec_()
-        self.__color_button.setStyleSheet('background-color: {}; border: none;'.format(dialog.selected_color))
+        self.__color_button.setStyleSheet('background-color: {};'.format(dialog.selected_color))
         self._config['color'] = dialog.selected_color
 
     def _onCaseSensitiveBtnClick(self):
         pass
 
     def _onEnabledBtnClick(self):
-        pass
+        emit.enabled()
 
     def get_highlight_config(self):
         self._config['regex'] = self.__regex_line_edit.text()
         return self._config
 
 
-class HighlighterManagerWidget(QtWidgets.QWidget):
-    pass
+class HighlighterManagerWidget(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super(HighlighterManagerWidget, self).__init__(parent)
+
+        self.setWindowTitle('Highlight Manager')
+        layout = QtWidgets.QVBoxLayout()
+
+        highlight_config = {
+            'color': mc.blue['400'],
+            'case_sensitive': False,
+            'regex': '',
+            'enabled': False
+        }
+
+        color_names = list(mc.colors.keys())
+        highlighers = []
+        for x in range(10):
+            highlight_config['color'] = mc.colors[color_names[x]]['400']
+            h = HighlighterWidget(self)
+            h.applyConfig(highlight_config)
+            highlighers.append(h)
+            layout.addWidget(h)
+
+        self.setLayout(layout)
 
 
 def show_highlighter_widget():

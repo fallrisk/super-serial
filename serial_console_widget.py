@@ -16,6 +16,8 @@ Copyright 2017 Justin Watson
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 
+import preferences
+
 
 ControlCharFormat = QtGui.QTextFormat.UserObject + 1
 
@@ -33,7 +35,7 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
         self.ccp.setTextEdit(self)
         #self.unicode_font = QtGui.QFont('Segoe UI Symbol', 12)
 
-        self.__highligter = Highlighter(self)
+        self.highligter = Highlighter(self)
         self.__highlight_timer = QtCore.QTimer(self)
         self.__highlight_timer.timeout.connect(self.__highligter.highlight)
         self.__highlight_timer.start(1000)
@@ -188,3 +190,8 @@ class Highlighter(QtCore.QObject):
             # Move to the next match.
             pos = index + regex.matchedLength()
             index = regex.indexIn(self.__parent.toPlainText(), pos)
+
+    def add_highlight(self, highlight):
+        pass
+
+    def remove_highlight(self, highlight):

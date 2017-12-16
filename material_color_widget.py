@@ -12,14 +12,12 @@ class ColorButton(QtWidgets.QPushButton):
     def __init__(self, parent, color):
         super(ColorButton, self).__init__(parent)
         self.color = color
-        self.setStyleSheet('background-color: {}; border: 1px solid white; width: 34px; height: 34px;'.format(color))
+        self.setStyleSheet('background-color: {}; border: none; width: 34px; height: 34px;'.format(color))
 
     def enterEvent(self, event):
-        #self.setStyleSheet('background-color: {};'.format(self.color))
         self.setCursor(QtCore.Qt.PointingHandCursor)
 
     def leaveEvent(self, event):
-        #self.setStyleSheet('background-color: {}; border: none;'.format(self.color))
         self.setCursor(QtCore.Qt.ArrowCursor)
 
 
@@ -28,7 +26,7 @@ class MaterialColorDialog(QtWidgets.QDialog):
         super(MaterialColorDialog, self).__init__(parent)
         self.setWindowTitle('Material Color Dialog')
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
-        self.resize(380, 300)
+        self.resize(370, 300)
         self.selected_color = mc.colors['blue']['400']
         # Use a grid layout for the color buttons.
         # http://doc.qt.io/qt-5/qtwidgets-widgets-calculator-example.html
@@ -37,7 +35,7 @@ class MaterialColorDialog(QtWidgets.QDialog):
         btn_layout = QtWidgets.QGridLayout()
         btn_layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(0)
+        btn_layout.setSpacing(1)
 
         color_buttons = []
         r = c = 0
@@ -65,10 +63,8 @@ class MaterialColorDialog(QtWidgets.QDialog):
         layout.setSpacing(0)
         layout.addWidget(scroll_area)
         self.setLayout(layout)
-        self.show()
 
     def _onColorClick(self):
-        print(self.sender().color)
         self.selected_color = self.sender().color
         self.close()
 

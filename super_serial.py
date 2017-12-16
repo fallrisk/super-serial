@@ -35,6 +35,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.Qt import QDesktopServices, QUrl
 
 import console
+import highlighter_widget
 import preferences
 import serial
 import serial_console_widget
@@ -109,6 +110,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.console_action = self.view_menu.addAction('Show Console', self.showConsole,
             'Ctrl+`')
+        self.highlighter_manager_action = self.view_menu.addAction('Show Highlights', self.showHighlights)
 
         self.view_menu.addSeparator()
         self.local_echo_action = self.view_menu.addAction('Enable Local Echo', self._onLocalEchoAction)
@@ -141,6 +143,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialConsoleWidget.document().setDefaultFont(mono_font)
         self.serialConsoleWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
+        self.highlighter_manager = highlighter_widget.HighlighterManagerWidget(self)
+
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         splitter.addWidget(self.serialConsoleWidget)
         splitter.addWidget(self.consoleWidget)
@@ -168,6 +172,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         controlCharInterface = serial_console_widget.ControlCharObject(self)
         self.serialConsoleWidget.document().documentLayout().registerHandler(
             serial_console_widget.ControlCharFormat, controlCharInterface)
+
+        self.highlighter_manager.enabled.connect(self._onHighlightEnabled)
+        self.serialConsoleWidget.highlighter.
+
+    def _onHighlightEnabled(self):
+        self.serialConsoleWidget.highlighter.
 
     def fileQuit(self):
         self.close()
@@ -211,6 +221,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             self.consoleWidget.hide()
             self.console_action.setText('Show Console')
+
+    def showHighlights(self):
+        self.highlighter_manager.show()
 
     def _onShowCrLfAction(self):
         if self.serialConsoleWidget.show_crlf:
