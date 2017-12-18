@@ -176,7 +176,7 @@ class Highlighter(QtCore.QObject):
         #print(self.__highlight_manager.get_highlights())
 
         for highlight in self.__highlight_manager.get_highlights():
-            if not highlight['enabled']:
+            if not highlight['enabled'] or highlight['pattern'] == '':
                 continue
             # Format properties are in the following to classes.
             # http://doc.qt.io/qt-5/qtextformat.html#public-functions
@@ -184,7 +184,6 @@ class Highlighter(QtCore.QObject):
             char_format.setForeground(QtGui.QBrush(
                 QtGui.QColor(highlight['color'])
                 ))
-            pattern = 'FW'
             # http://doc.qt.io/qt-5/qregexp.html
             regex = QtCore.QRegExp(highlight['pattern'])
             if highlight['case_sensitive']:
