@@ -26,7 +26,7 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
 
     dataWrite = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, highlight_manager, parent=None):
         super(SerialConsoleWidget, self).__init__(parent)
         self.local_echo_enabled = False
         self.setWordWrapMode(QtGui.QTextOption.NoWrap)
@@ -35,9 +35,9 @@ class SerialConsoleWidget(QtWidgets.QTextEdit):
         self.ccp.setTextEdit(self)
         #self.unicode_font = QtGui.QFont('Segoe UI Symbol', 12)
 
-        self.highligter = Highlighter(self)
+        self.__highlighter = Highlighter(self, highlight_manager)
         self.__highlight_timer = QtCore.QTimer(self)
-        self.__highlight_timer.timeout.connect(self.__highligter.highlight)
+        self.__highlight_timer.timeout.connect(self.__highlighter.highlight)
         self.__highlight_timer.start(1000)
 
         # TODO: Run highlight once every time new data is provided for the widget.
@@ -161,9 +161,10 @@ class SuperRawFont(QtGui.QRawFont):
 
 
 class Highlighter(QtCore.QObject):
-    def __init__(self, parent):
+    def __init__(self, parent, highlight_manager):
         super(Highlighter, self).__init__()
         self.__parent = parent
+        self.__highlight_manager = highlight_manager
 
     def highlight(self):
         """
@@ -171,27 +172,32 @@ class Highlighter(QtCore.QObject):
         """
         char_format = QtGui.QTextCharFormat()
         cursor = self.__parent.textCursor()
-        # Format properties are in the following to classes.
-        # http://doc.qt.io/qt-5/qtextformat.html#public-functions
-        # http://doc.qt.io/qt-5/qtextcharformat.html
-        char_format.setForeground(QtGui.QBrush(QtGui.QColor('red')))
-        pattern = 'FW'
-        # http://doc.qt.io/qt-5/qregexp.html
-        regex = QtCore.QRegExp(pattern)
-        pos = 0
-        index = regex.indexIn(self.__parent.toPlainText(), pos)
-        while index != -1:
-            # Select the matched text and apply the format.
-            #print(index, index + regex.matchedLength())
-            cursor.setPosition(index)
-            cursor.setPosition(index + regex.matchedLength(), QtGui.QTextCursor.KeepAnchor)
-            # http://doc.qt.io/qt-5/richtext-cursor.html
-            cursor.mergeCharFormat(char_format)
-            # Move to the next match.
-            pos = index + regex.matchedLength()
+
+        #print(self.__highlight_manager.get_highlights())
+
+        for highlight in self.__highlight_manager.get_highlights():
+            if not highlight['enabled']:
+                continue
+            # Format properties are in the following to classes.
+            # http://doc.qt.io/qt-5/qtextformat.html#public-functions
+            # http://doc.qt.io/qt-5/qtextcharformat.html
+            char_format.setForeground(QtGui.QBrush(
+                QtGui.QColor(highlight['color'])
+                ))
+            pattern = 'FW'
+            # http://doc.qt.io/qt-5/qregexp.html
+            regex = QtCore.QRegExp(highlight['pattern'])
+            if highlight['case_sensitive']:
+                regex.setCaseSensitivity[QtCore.Qt.CaseSensitive]
+            pos = 0
             index = regex.indexIn(self.__parent.toPlainText(), pos)
-
-    def add_highlight(self, highlight):
-        pass
-
-    def remove_highlight(self, highlight):
+            while index != -1:
+                # Select the matched text and apply the format.
+                #print(index, index + regex.matchedLength())
+                cursor.setPosition(index)
+                cursor.setPosition(index + regex.matchedLength(), QtGui.QTextCursor.KeepAnchor)
+                # http://doc.qt.io/qt-5/richtext-cursor.html
+                cursor.mergeCharFormat(char_format)
+                # Move to the next match.
+                pos = index + regex.matchedLength()
+                index = regex.indexIn(self.__parent.toPlainText(), pos)

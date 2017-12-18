@@ -42,10 +42,11 @@ class SmallButton(QtWidgets.QPushButton):
 
 class HighlighterWidget(QtWidgets.QWidget):
 
-    enabled = QtCore.pyqtSignal()
+    updated = QtCore.pyqtSignal(int)
 
-    def __init__(self, parent=None, config=None):
+    def __init__(self, parent=None, config=None, index=0):
         super(HighlighterWidget, self).__init__(parent)
+        self.index = index
         layout = QtWidgets.QHBoxLayout()
 
         layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
@@ -56,7 +57,7 @@ class HighlighterWidget(QtWidgets.QWidget):
             self._config = {
                 'color': mc.blue['400'],
                 'case_sensitive': False,
-                'regex': 'FW',
+                'pattern': 'FW',
                 'enabled': True
             }
         else:
@@ -69,8 +70,10 @@ class HighlighterWidget(QtWidgets.QWidget):
         self.__regex_line_edit = QtWidgets.QLineEdit()
         self.__regex_line_edit.setMinimumHeight(24)
         self.__regex_line_edit.setPlaceholderText('Regular Expresssion')
+        self.__regex_line_edit.textChanged.connect(self._onRegexChanged)
         self.__enable_button = SmallButton('', 'Enable highlighter',
             None, True, 'Disable highlighter.')
+        self.__enable_button.clicked.connect(self._onEnabledBtnClick)
 
         layout.addWidget(self.__color_button)
         layout.addWidget(self.__case_sensitive_button)
@@ -94,7 +97,7 @@ class HighlighterWidget(QtWidgets.QWidget):
             self.__case_sensitive_button.setChecked(True)
         else:
             self.__case_sensitive_button.setChecked(False)
-        self.__regex_line_edit.setText(config['regex'])
+        self.__regex_line_edit.setText(config['pattern'])
         self._config = config
 
     def _onColorButtonClick(self):
@@ -104,42 +107,53 @@ class HighlighterWidget(QtWidgets.QWidget):
         dialog.exec_()
         self.__color_button.setStyleSheet('background-color: {};'.format(dialog.selected_color))
         self._config['color'] = dialog.selected_color
+        self.updated.emit(self.index)
 
     def _onCaseSensitiveBtnClick(self):
-        pass
+        if self.__case_sensitive_button.isChecked():
+            self._config['case_sensitive'] = True
+        else:
+            self._config['case_sensitive'] = True
+        self.updated.emit(self.index)
 
     def _onEnabledBtnClick(self):
-        emit.enabled()
+        if self.__enable_button.isChecked():
+            self._config['enabled'] = True
+        else:
+            self._config['enabled'] = False
+        self.updated.emit(self.index)
+
+    def _onRegexChanged(self):
+        self._config['pattern'] = self.__regex_line_edit.text()
+        self.updated.emit(self.index)
 
     def get_highlight_config(self):
-        self._config['regex'] = self.__regex_line_edit.text()
+        self._config['pattern'] = self.__regex_line_edit.text()
         return self._config
 
 
-class HighlighterManagerWidget(QtWidgets.QDialog):
-    def __init__(self, parent=None):
-        super(HighlighterManagerWidget, self).__init__(parent)
+class HighlightManagerWidget(QtWidgets.QDialog):
+    def __init__(self, parent, highlight_manager):
+        super(HighlightManagerWidget, self).__init__(parent)
+
+        self.highlight_manager = highlight_manager
 
         self.setWindowTitle('Highlight Manager')
         layout = QtWidgets.QVBoxLayout()
 
-        highlight_config = {
-            'color': mc.blue['400'],
-            'case_sensitive': False,
-            'regex': '',
-            'enabled': False
-        }
-
-        color_names = list(mc.colors.keys())
-        highlighers = []
-        for x in range(10):
-            highlight_config['color'] = mc.colors[color_names[x]]['400']
-            h = HighlighterWidget(self)
-            h.applyConfig(highlight_config)
-            highlighers.append(h)
-            layout.addWidget(h)
+        self._highlighter_widgets = []
+        for i, highlight in enumerate(highlight_manager.get_highlights()):
+            hw = HighlighterWidget(self, None, i)
+            hw.applyConfig(highlight)
+            hw.updated.connect(self._onHighlightWidgetUpdate)
+            self._highlighter_widgets.append(hw)
+            layout.addWidget(hw)
 
         self.setLayout(layout)
+
+    def _onHighlightWidgetUpdate(self, widget_index):
+        self.highlight_manager.set_highlight(widget_index,
+            self._highlighter_widgets[widget_index].get_highlight_config())
 
 
 def show_highlighter_widget():
