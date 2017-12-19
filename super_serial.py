@@ -64,6 +64,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             preferenes_file = args.preferences
         preferences.load(preferenes_file)
 
+        serial_config = None
+        if args.port is not None:
+            serial_config = serial_args_to_config(args)
+
         console.enqueue('Version: {}'.format(__version__))
         console.enqueue('Executable Path: {}'.format(osp.realpath(__file__)))
         console.enqueue('Working Directory: {}'.format(os.getcwd()))
@@ -176,6 +180,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialConsoleWidget.document().documentLayout().registerHandler(
             serial_console_widget.ControlCharFormat, controlCharInterface)
 
+        if serial_config is not None:
+            config_result = self._serial_port.setConfig(serial_config)
+            if not config_result:
+                console.enqueue('Error serial config.')
+            else:
+                open_result = self._serial_port.open()
+                if open_result != 0:
+                    console.enqueue('Error connection: {}'.format(
+                        self._serial_port.qserialport_errors[config_result]))
+
     def fileQuit(self):
         self.close()
 
@@ -258,6 +272,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.connectionLabel.setText('Connected: ' + self._serial_port.configToStr())
         self.disconnect_action.setEnabled(True)
         self.connect_action.setEnabled(False)
+        self.serialConsoleWidget.setFocus(QtCore.Qt.OtherFocusReason)
 
     def _onSerialClosed(self):
         self.connectionLabel.setText('Disconnected')
@@ -359,11 +374,11 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.scanComsButton = QtWidgets.QPushButton('Scan COMs')
         self.scanComsButton.clicked.connect(self._onScanComs)
 
-        self.baudrateLabel = QtWidgets.QLabel('Baudrate')
+        self.baudrateLabel = QtWidgets.QLabel('Baud')
 
         self.baudrateEdit = QtWidgets.QLineEdit('115200')
 
-        self.databitsLabel = QtWidgets.QLabel('Databits')
+        self.databitsLabel = QtWidgets.QLabel('Data bits')
 
         self.databitsComboBox = QtWidgets.QComboBox()
         self.databitsComboBox.addItem('5')
@@ -372,7 +387,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.databitsComboBox.addItem('8')
         self.databitsComboBox.setCurrentIndex(3)
 
-        self.stopbitsLabel = QtWidgets.QLabel('Stopbits')
+        self.stopbitsLabel = QtWidgets.QLabel('Stop bits')
 
         self.stopbitsComboBox = QtWidgets.QComboBox()
         self.stopbitsComboBox.addItem('1')
@@ -443,9 +458,9 @@ class SerialConfigDialog(QtWidgets.QDialog):
     def _onConnect(self):
         serial_config = {
             'port': self.portComboBox.currentText(),
-            'baudrate': int(self.baudrateEdit.text()),
-            'databits': int(self.databitsComboBox.currentText()),
-            'stopbits': self.stopbitsComboBox.currentText(),
+            'baud': int(self.baudrateEdit.text()),
+            'data_bits': int(self.databitsComboBox.currentText()),
+            'stop_bits': self.stopbitsComboBox.currentText(),
             'parity': self.parityComboBox.currentText(),
             'flow_control': self.flowControlComboBox.currentText()
         }
@@ -530,11 +545,55 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.consoleInput.setFont(font)
 
 
+def serial_args_to_config(args):
+    """
+    Converts the arguments from the command line to the configuration needed
+    for the class serial.SerialPort to make a connection.
+    """
+    if args.port is None:
+        return None
+    serial_config = {}
+    serial_config['port'] = args.port
+    serial_config['baud'] = args.baud
+    serial_config['data_bits'] = args.data_bits
+    serial_config['stop_bits'] = str(args.stop_bits)
+
+    if args.parity == 'n':
+        serial_config['parity'] = 'NONE'
+    elif args.parity == 'o':
+        serial_config['parity'] = 'ODD'
+    elif args.parity == 'e':
+        serial_config['parity'] = 'EVEN'
+    elif args.parity == 's':
+        serial_config['parity'] = 'SPACE'
+    elif args.parity == 'm':
+        serial_config['parity'] = 'MARK'
+    else:
+        serial_config['data_bits'] = 'UNK' # Unknown
+
+    if args.flow_control == 's':
+        serial_config['flow_control'] = 'XON/XOFF'
+    elif args.flow_control == 'h':
+        serial_config['flow_control'] = 'RTS/CTS'
+    elif args.flow_control == 'n':
+        serial_config['flow_control'] = 'NONE'
+    else:
+        serial_config['flow_control'] = 'UNK'
+
+    return serial_config
+
+
 def main():
     global app
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--baud', type=int, dest='baud', default=115200, help='Baud of the connection. Default 115200')
+    parser.add_argument('--data-bits', type=int, dest='data_bits', default=8, help='Number of data bits. Default 8')
+    parser.add_argument('--fc', '--flow-control', dest='flow_control', default='n', help='Hardware RTS/CTS (h), Software XON/XOFF (s), or None (n). Default \'n\' for None')
+    parser.add_argument('--parity', dest='parity', default='n', help='Parity of the connection. None (n), Odd (o), Even (e), Space (s), Mark (m). Default \'n\' for None')
+    parser.add_argument('--port', dest='port', help='Port to connect to at start.')
     parser.add_argument('--preferences', help='Specify a preferences file instead of the default.')
+    parser.add_argument('--stop-bits', dest='stop_bits', type=float, default=1, help='Number of stop bits. Default 1')
     parser.add_argument('--version', action='version', version=__version__)
 
     args = parser.parse_args()

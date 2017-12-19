@@ -71,6 +71,7 @@ class HighlighterWidget(QtWidgets.QWidget):
         self.__regex_line_edit.setMinimumHeight(24)
         self.__regex_line_edit.setPlaceholderText('Regular Expresssion')
         self.__regex_line_edit.textChanged.connect(self._onRegexChanged)
+        self.__regex_line_edit.setMinimumWidth(200)
         self.__enable_button = SmallButton('', 'Enable highlighter',
             None, True, 'Disable highlighter.')
         self.__enable_button.clicked.connect(self._onEnabledBtnClick)

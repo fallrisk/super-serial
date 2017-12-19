@@ -95,25 +95,25 @@ class SerialPort(QtSerialPort.QSerialPort):
         self._config_error = ''
 
         self.setPortName(config['port'])
-        self.setBaudRate(config['baudrate'], QtSerialPort.QSerialPort.AllDirections)
+        self.setBaudRate(config['baud'], QtSerialPort.QSerialPort.AllDirections)
 
-        if config['stopbits'] == '1':
+        if config['stop_bits'] == '1':
             self.setStopBits(QtSerialPort.QSerialPort.OneStop)
-        elif config['stopbits'] == '1.5':
+        elif config['stop_bits'] == '1.5':
             self.setStopBits(QtSerialPort.QSerialPort.OneAndHalfStop)
-        elif config['stopbits'] == '2':
+        elif config['stop_bits'] == '2':
             self.setStopBits(QtSerialPort.QSerialPort.TwoStop)
         else:
             self._config_error = 'Invalid choice for stop bits.'
             return False
 
-        if config['databits'] == 5:
+        if config['data_bits'] == 5:
             self.setDataBits(QtSerialPort.QSerialPort.Data5)
-        elif config['databits'] == 6:
+        elif config['data_bits'] == 6:
             self.setDataBits(QtSerialPort.QSerialPort.Data6)
-        elif config['databits'] == 7:
+        elif config['data_bits'] == 7:
             self.setDataBits(QtSerialPort.QSerialPort.Data7)
-        elif config['databits'] == 8:
+        elif config['data_bits'] == 8:
             self.setDataBits(QtSerialPort.QSerialPort.Data8)
         else:
             self._config_error = 'Invalid choice for data bits.'
@@ -160,9 +160,9 @@ class SerialPort(QtSerialPort.QSerialPort):
 
         c = self._serial_config
         s = c['port']
-        s += ' ' + str(c['baudrate'])
-        s += ' ' + str(c['databits'])
-        s += ' ' + c['stopbits']
+        s += ' ' + str(c['baud'])
+        s += ' ' + str(c['data_bits'])
+        s += ' ' + c['stop_bits']
 
         if c['parity'] == 'NONE':
             s += ' None'
