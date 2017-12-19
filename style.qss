@@ -195,3 +195,30 @@ SerialConfigDialog > QLabel#error {
     min-height: 80px;
 }
 
+
+SetTitleDialog {
+    color: #404040;
+    background: #C7CBD1;
+    border: solid black 1px;
+}
+
+SetTitleDialog > QPushButton {
+    color: #404040;
+    background: #E0E2E6;
+    border: none;
+    border-radius: 2px;
+    padding: 5px 10px 5px 10px;
+    font: normal 12px;
+    width: 80px;
+}
+
+SetTitleDialog > QLineEdit {
+    border: none;
+    border-radius: 2px;
+    font: normal 12px;
+    padding: 4px 5px 4px 5px;
+}
+
+SetTitleDialog > QPushButton:hover {
+    background: #E8EAED;
+}

@@ -322,8 +322,8 @@ class SetTitleDialog(QtWidgets.QDialog):
         # http://www.bogotobogo.com/Qt/Qt5_GridLayout.php
         layout = QtWidgets.QGridLayout()
         #layout.setColumnStretch(1, 1)
-        layout.setColumnMinimumWidth(0, 200)
-        layout.setColumnMinimumWidth(1, 100)
+        # layout.setColumnMinimumWidth(0, 200)
+        # layout.setColumnMinimumWidth(1, 100)
 
         # row, column, rowspan, colspan
         layout.addWidget(self.titleLineEdit, 0, 0, 1, 2)
