@@ -363,14 +363,14 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.portLabel = QtWidgets.QLabel('Serial Port')
 
         self.portComboBox = QtWidgets.QComboBox()
-        self.portComboBox.addItem("COM4")
-        self.portComboBox.addItem("COM5")
-        self.portComboBox.addItem("COM6")
-        self.portComboBox.addItem('COM21')
-        self.portComboBox.addItem('COM20')
-        self.portComboBox.addItem('/dev/ttyACM0')
         self.portComboBox.setCurrentIndex(3)
         self.portComboBox.setEditable(True)
+
+        available_ports = self._serial_port.scanComs()
+        if len(available_ports) > 0:
+            self.portComboBox.clear()
+            for port in available_ports:
+                self.portComboBox.addItem(port.portName())
 
         self.scanComsButton = QtWidgets.QPushButton('Scan COMs')
         self.scanComsButton.clicked.connect(self._onScanComs)
