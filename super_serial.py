@@ -357,7 +357,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.setWindowTitle('Set Window Title')
         # https://doc.qt.io/qt-5/qt.html
         # http://doc.qt.io/qt-5/qt.html#WindowType-enum
-        self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.MSWindowsFixedSizeDialogHint | QtCore.Qt.Dialog)
+        self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.FramelessWindowHint )
 
         self.portLabel = QtWidgets.QLabel('Serial Port')
 

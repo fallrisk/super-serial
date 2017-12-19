@@ -131,3 +131,63 @@ QStatusBar > QLabel {
     color: #404040;
 }
 
+SerialConfigDialog {
+    color: #404040;
+    background: #C7CBD1;
+    border: solid black 1px;
+}
+
+SerialConfigDialog > QLabel {
+    color: #404040;
+    font: normal 12px;
+}
+
+SerialConfigDialog > QPushButton {
+    color: #404040;
+    background: #E0E2E6;
+    border: none;
+    border-radius: 2px;
+    padding: 5px 10px 5px 10px;
+    font: normal 12px;
+    width: 80px;
+}
+
+SerialConfigDialog > QPushButton:hover {
+    background: #E8EAED;
+}
+
+SerialConfigDialog > QComboBox {
+    border: none;
+    border-radius: 2px;
+    background: white;
+    font: normal 12px;
+    padding: 4px 5px 4px 5px;
+}
+
+SerialConfigDialog > QComboBox:editable {
+    border: none;
+    border-radius: 2px;
+    background: white;
+    font: normal 12px;
+}
+
+SerialConfigDialog > QLineEdit {
+    border: none;
+    border-radius: 2px;
+    font: normal 12px;
+    padding: 4px 5px 4px 5px;
+}
+
+SerialConfigDialog > QComboBox::down-arrow {
+    color: #B2B2B2;
+    border: none;
+    image: url(./material-design-icons-subset/ic_keyboard_arrow_down_black_24dp.png);
+    height: 12px;
+    width: 12px;
+}
+
+SerialConfigDialog > QComboBox::drop-down {
+    border: 0; /* This removes the border for the down-arrow. Weird bug. */
+    font: normal 12px;
+}
+
