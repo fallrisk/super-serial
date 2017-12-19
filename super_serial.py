@@ -27,6 +27,7 @@ References
 """
 
 import argparse
+import copy
 import os
 import os.path as osp
 import sys
@@ -413,6 +414,10 @@ class SerialConfigDialog(QtWidgets.QDialog):
         self.flowControlComboBox.addItem('XON/XOFF')
         self.flowControlComboBox.setCurrentIndex(1)
 
+        self.errorWidget = QtWidgets.QLabel()
+        self.errorWidget.setObjectName('error')
+        self.errorWidget.setWordWrap(True)
+
         self.cancelButton = QtWidgets.QPushButton('Cancel')
         self.connectButton = QtWidgets.QPushButton('Connect')
         self.saveButton = QtWidgets.QPushButton('Save')
@@ -444,10 +449,12 @@ class SerialConfigDialog(QtWidgets.QDialog):
         layout.addWidget(self.flowControlLabel, 5, 0, 1, 2)
         layout.addWidget(self.flowControlComboBox, 5, 2, 1, 2)
 
-        layout.addWidget(self.cancelButton, 6, 0, 1, 1)
-        layout.addWidget(self.connectButton, 6, 1, 1, 1)
-        layout.addWidget(self.saveButton, 6, 2, 1, 1)
-        layout.addWidget(self.loadButton, 6, 3, 1, 1)
+        layout.addWidget(self.errorWidget, 6, 0, 1, 4)
+
+        layout.addWidget(self.cancelButton, 7, 0, 1, 1)
+        layout.addWidget(self.connectButton, 7, 1, 1, 1)
+        layout.addWidget(self.saveButton, 7, 2, 1, 1)
+        layout.addWidget(self.loadButton, 7, 3, 1, 1)
 
         self.setLayout(layout)
         self.adjustSize()
@@ -469,12 +476,15 @@ class SerialConfigDialog(QtWidgets.QDialog):
 
         if not config_result:
             self._shake()
+            self.errorWidget.setText(self._serial_port.get_config_error())
             return
 
         open_result = self._serial_port.open()
 
         if open_result != 0:
             self._shake()
+            self.errorWidget.setText(
+                self._serial_port.qserialport_errors[open_result])
             return
 
         self.close()
@@ -490,13 +500,48 @@ class SerialConfigDialog(QtWidgets.QDialog):
     def _shake(self):
         """Shakes the window. Like shaking your head as in there was a problem.
         """
-        # animation = QtCore.QPropertyAnimation(self, 'geometry')
-        # animation.setDuration(1000)
-        # animation.setStartValue(QtCore.QRect())
-        # animation.setEndValue(QtCore.QRect())
-        # animation.start()
-        print(self.pos())
-        # self.move(400, 400)
+        self.shakeAnimation = QtCore.QSequentialAnimationGroup()
+
+        current_geometry = self.geometry()
+
+        move_geometry = copy.deepcopy(current_geometry)
+        move_geometry.translate(-10, 0)
+        animation0 = QtCore.QPropertyAnimation(self, bytearray('geometry', 'ASCII'))
+        animation0.setDuration(40)
+        animation0.setStartValue(current_geometry)
+        animation0.setEndValue(move_geometry)
+        self.shakeAnimation.addAnimation(animation0)
+
+        move_geometry.translate(20, 0)
+        animation1 = QtCore.QPropertyAnimation(self, bytearray('geometry', 'ASCII'))
+        animation1.setDuration(40)
+        animation1.setStartValue(current_geometry)
+        animation1.setEndValue(move_geometry)
+        self.shakeAnimation.addAnimation(animation1)
+
+        move_geometry.translate(-20, 0)
+        animation2 = QtCore.QPropertyAnimation(self, bytearray('geometry', 'ASCII'))
+        animation2.setDuration(40)
+        animation2.setStartValue(current_geometry)
+        animation2.setEndValue(move_geometry)
+        self.shakeAnimation.addAnimation(animation2)
+
+        move_geometry.translate(20, 0)
+        animation3 = QtCore.QPropertyAnimation(self, bytearray('geometry', 'ASCII'))
+        animation3.setDuration(40)
+        animation3.setStartValue(current_geometry)
+        animation3.setEndValue(move_geometry)
+        self.shakeAnimation.addAnimation(animation3)
+
+        move_geometry.translate(-10, 0)
+        animation4 = QtCore.QPropertyAnimation(self, bytearray('geometry', 'ASCII'))
+        animation4.setDuration(40)
+        animation4.setStartValue(current_geometry)
+        animation4.setEndValue(move_geometry)
+        self.shakeAnimation.addAnimation(animation4)
+
+        self.shakeAnimation.start()
+
 
 
 class ConsoleWidget(QtWidgets.QWidget):

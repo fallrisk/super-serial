@@ -144,6 +144,9 @@ class SerialPort(QtSerialPort.QSerialPort):
 
         return True
 
+    def get_config_error(self):
+        return self._config_error
+
     def configToStr(self):
         """Makes a string version of the serial configuration.
 

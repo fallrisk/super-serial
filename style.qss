@@ -191,3 +191,7 @@ SerialConfigDialog > QComboBox::drop-down {
     font: normal 12px;
 }
 
+SerialConfigDialog > QLabel#error {
+    min-height: 80px;
+}
+
