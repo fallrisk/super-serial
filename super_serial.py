@@ -196,12 +196,25 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self._serialConfigDialog.updatePortList()
 
-        self._connections = serial.SerialConnections.load(self.connections_file)
-        result = serial.SerialConnections.check(self._connections)
+        self._connections = {}
+        self._connections_successfully_loaded = False
+        connections = serial.SerialConnections.load(self.connections_file)
+        connections_okay = serial.SerialConnections.check(connections)
         # If the connections configuration checked out okay then load the
         # connections. Otherwise don't load them.
-        if result:
-            self._serialConfigDialog.setConnections(self._connections)
+        if connections_okay:
+            # Convert the connections into a dict using the names.
+            # This is so we can find the items by name quickly.
+            #  https://docs.python.org/3.6/faq/design.html#how-are-dictionaries-implemented
+            d = {}
+            for c in connections:
+                d[c['name']] = c
+                d[c['name']]['stop_bits'] = float(d[c['name']]['stop_bits'])
+            self._serialConfigDialog.setConnections(d)
+            self._connections = d
+            self._connections_successfully_loaded = True
+            console.enqueue('Connections file loaded: {}'.format(
+                self.connections_file))
 
         if serial_config is not None:
             config_result = self._serial_port.setConfig(serial_config)
@@ -278,7 +291,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         # This method is overriding the event 'close'.
-        # TODO: Save the connections file.
+        if self._connections_successfully_loaded:
+            serial.SerialConnections.save(list(self._connections.values()),
+                self.connections_file)
 
         if not preferences.get('prompt_on_quit'):
             return

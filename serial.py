@@ -23,6 +23,7 @@ import re
 import threading
 import time
 
+import jsonschema
 from PyQt5 import QtCore, QtSerialPort
 
 import console
@@ -102,11 +103,11 @@ class SerialPort(QtSerialPort.QSerialPort):
         self.setPortName(config['port'])
         self.setBaudRate(config['baud'], QtSerialPort.QSerialPort.AllDirections)
 
-        if config['stop_bits'] == '1':
+        if config['stop_bits'] == 1:
             self.setStopBits(QtSerialPort.QSerialPort.OneStop)
-        elif config['stop_bits'] == '1.5':
+        elif config['stop_bits'] == 1.5:
             self.setStopBits(QtSerialPort.QSerialPort.OneAndHalfStop)
-        elif config['stop_bits'] == '2':
+        elif config['stop_bits'] == 2:
             self.setStopBits(QtSerialPort.QSerialPort.TwoStop)
         else:
             self._config_error = 'Invalid choice for stop bits.'
@@ -203,7 +204,7 @@ class SerialPort(QtSerialPort.QSerialPort):
 
 
 class SerialConnections():
-    """Handful of methods to load, save, and check connection.json files.
+    """Handful of methods to load, save, and check connections.json files.
     """
 
     @staticmethod
@@ -215,22 +216,15 @@ class SerialConnections():
                 .format(filePath))
         try:
             # Now parse the file.
-            with open(filePath, encoding='utf-8') as data_file:
-                contents = data_file.read()
+            with open(filePath, encoding='utf-8') as connections_file:
+                contents = connections_file.read()
                 # Remove all comments that start with "//".
                 contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
                 # Remove blank lines.
                 contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
                 # Parse the file as JSON.
                 connections = json.loads(contents)
-                # Convert the connections into a dict using the names.
-                # This is so we can find the items by name quickly.
-                #  https://docs.python.org/3.6/faq/design.html#how-are-dictionaries-implemented
-                d = {}
-                for c in connections:
-                    d[c['name']] = c
-                    d[c['name']]['stop_bits'] = float(d[c['name']]['stop_bits'])
-            return d
+            return connections
         except TypeError:
             # If there was a parsing error post a message to the console.
             console.enqueue('Error parsing the preferences file.')
@@ -240,11 +234,26 @@ class SerialConnections():
     def check(connections):
         """Checks a dictionary of connections for correct fields and values
         in the fields.
+
+        References
+        ----------
+        * http://json-schema.org/specification.html
         """
+        with open('connections.schema', encoding='utf-8') as schema_file:
+            schema = json.loads(schema_file.read())
+        try:
+            jsonschema.validate(connections, schema)
+        except jsonschema.ValidationError as e:
+            # print(e)
+            console.enqueue(e.message)
+            return False
         return True
 
     @staticmethod
     def save(connections, filePath):
         """Saves the connections into the file at path "filePath".
         """
-        pass
+        # print('saving')
+        # print(connections)
+        with open(filePath, 'w', encoding='utf-8') as connections_file:
+            json.dump(connections, connections_file, indent=4, sort_keys=True)

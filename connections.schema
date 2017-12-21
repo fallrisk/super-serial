@@ -1,0 +1,42 @@
+ {
+    "$schema": "http://superserial.io/connections.schema",
+    "title": "Connection Configuration List",
+    "type": "array",
+    "items": {
+        "title": "Connection Configuration",
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "port": {
+                "type": "string"
+            },
+            "baud": {
+                "type": "number",
+                "enum": [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+            },
+            "data_bits": {
+                "type": "number",
+                "enum": [5, 6, 7, 8]
+            },
+            "stop_bits": {
+                "type": "number",
+                "enum": [1, 1.5, 2]
+            },
+            "parity": {
+                "type": "string",
+                "enum": ["none", "mark", "space", "even", "odd"]
+            },
+            "flow_control" : {
+                "type": "string",
+                "enum": ["none", "software", "hardware"]
+            },
+            "local_echo_enabled": {
+                "type": "boolean"
+            }
+        },
+        "required": ["name", "port", "baud", "data_bits", "stop_bits",
+        "parity", "flow_control"]
+    }
+}
