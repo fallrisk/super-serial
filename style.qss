@@ -29,6 +29,48 @@ ApplicationWindow {
     background-color: white;
 }
 
+/**
+ * Connection List Dialog
+ */
+
+ConnectionListWidget > QListWidget {
+    border: 0;
+    font: normal 12px;
+    background: white;
+}
+
+ConnectionListWidget > QListWidget::item {
+    font: normal 12px;
+    padding: 4px 5px 4px 5px;
+}
+
+ConnectionListWidget, ConnectionListWidget > QVBoxLayout {
+    color: #404040;
+    background: #C7CBD1;
+    border: solid black 1px;
+}
+
+ConnectionListWidget > QLabel {
+    color: #404040;
+    font: normal 12px;
+}
+
+ConnectionListWidget > QPushButton {
+    color: #404040;
+    background: #E0E2E6;
+    border: none;
+    border-radius: 2px;
+    padding: 5px 10px 5px 10px;
+    font: normal 12px;
+    width: 80px;
+}
+
+ConnectionListWidget > QPushButton:hover {
+    background: #E8EAED;
+}
+
+/* /Connection List Dialog */
+
 ConsoleWidget {
 }
 
@@ -131,18 +173,21 @@ QStatusBar > QLabel {
     color: #404040;
 }
 
-SerialConfigDialog {
+SerialConfigWidget {
     color: #404040;
     background: #C7CBD1;
+}
+
+SerialConfigWidget > QGridLayout {
     border: solid black 1px;
 }
 
-SerialConfigDialog > QLabel {
+SerialConfigWidget > QLabel {
     color: #404040;
     font: normal 12px;
 }
 
-SerialConfigDialog > QPushButton {
+SerialConfigWidget > QPushButton {
     color: #404040;
     background: #E0E2E6;
     border: none;
@@ -152,11 +197,11 @@ SerialConfigDialog > QPushButton {
     width: 80px;
 }
 
-SerialConfigDialog > QPushButton:hover {
+SerialConfigWidget > QPushButton:hover {
     background: #E8EAED;
 }
 
-SerialConfigDialog > QComboBox {
+SerialConfigWidget > QComboBox {
     border: none;
     border-radius: 2px;
     background: white;
@@ -164,21 +209,21 @@ SerialConfigDialog > QComboBox {
     padding: 4px 5px 4px 5px;
 }
 
-SerialConfigDialog > QComboBox:editable {
+SerialConfigWidget > QComboBox:editable {
     border: none;
     border-radius: 2px;
     background: white;
     font: normal 12px;
 }
 
-SerialConfigDialog > QLineEdit {
+SerialConfigWidget > QLineEdit {
     border: none;
     border-radius: 2px;
     font: normal 12px;
     padding: 4px 5px 4px 5px;
 }
 
-SerialConfigDialog > QComboBox::down-arrow {
+SerialConfigWidget > QComboBox::down-arrow {
     color: #B2B2B2;
     border: none;
     image: url(./material-design-icons-subset/ic_keyboard_arrow_down_black_24dp.png);
@@ -186,15 +231,14 @@ SerialConfigDialog > QComboBox::down-arrow {
     width: 12px;
 }
 
-SerialConfigDialog > QComboBox::drop-down {
+SerialConfigWidget > QComboBox::drop-down {
     border: 0; /* This removes the border for the down-arrow. Weird bug. */
     font: normal 12px;
 }
 
-SerialConfigDialog > QLabel#error {
+SerialConfigWidget > QLabel#error {
     min-height: 80px;
 }
-
 
 SetTitleDialog {
     color: #404040;

@@ -15,13 +15,18 @@ Copyright 2017 Justin Watson
 """
 
 from datetime import datetime
+import json
+import os
+import os.path as osp
 import queue
+import re
 import threading
 import time
 
 from PyQt5 import QtCore, QtSerialPort
 
 import console
+
 
 class SerialPort(QtSerialPort.QSerialPort):
 
@@ -195,3 +200,44 @@ class SerialPort(QtSerialPort.QSerialPort):
         # http://doc.qt.io/qt-5/qserialportinfo.html#availablePorts
         available_ports = QtSerialPort.QSerialPortInfo.availablePorts()
         return available_ports
+
+
+class SerialConnections():
+    """Handful of methods to load, save, and check connection.json files.
+    """
+
+    @staticmethod
+    def load(filePath):
+        """Loads a JSON file and returns the result data.
+        """
+        if not os.path.isfile(filePath):
+            console.enqueue('Could not load connections file. File not found: {}'
+                .format(filePath))
+        try:
+            # Now parse the file.
+            with open(filePath, encoding='utf-8') as data_file:
+                contents = data_file.read()
+                # Remove all comments that start with "//".
+                contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
+                # Remove blank lines.
+                contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
+                # Parse the file as JSON.
+                connections = json.loads(contents)
+            return connections
+        except TypeError:
+            # If there was a parsing error post a message to the console.
+            console.enqueue('Error parsing the preferences file.')
+            return None
+
+    @staticmethod
+    def check(connections):
+        """Checks a dictionary of connections for correct fields and values
+        in the fields.
+        """
+        return True
+
+    @staticmethod
+    def save(connections, filePath):
+        """Saves the connections into the file at path "filePath".
+        """
+        pass
