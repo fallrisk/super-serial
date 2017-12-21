@@ -328,24 +328,30 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
 
 class SetTitleDialog(QtWidgets.QDialog):
+    """Dialog to prompt the user for a name for the application window.
+    """
+
     def __init__(self, parent=None):
         super(SetTitleDialog, self).__init__(parent)
 
         self.setWindowTitle("Set Window Title")
         self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.Dialog)
 
+        # Widgets
+        # -------
         self.titleLineEdit = QtWidgets.QLineEdit()
         self.setTitleButton = QtWidgets.QPushButton("Set Title")
         self.cancelButton = QtWidgets.QPushButton("Cancel")
 
-        self.setTitleButton.clicked.connect(self.setTitle)
-        self.cancelButton.clicked.connect(self.cancel)
+        # Connections
+        # -----------
+        self.setTitleButton.clicked.connect(self._onSetTitle)
+        self.cancelButton.clicked.connect(self._onCancel)
 
+        # Layout
+        # ------
         # http://www.bogotobogo.com/Qt/Qt5_GridLayout.php
         layout = QtWidgets.QGridLayout()
-        #layout.setColumnStretch(1, 1)
-        # layout.setColumnMinimumWidth(0, 200)
-        # layout.setColumnMinimumWidth(1, 100)
 
         # row, column, rowspan, colspan
         layout.addWidget(self.titleLineEdit, 0, 0, 1, 2)
@@ -355,10 +361,10 @@ class SetTitleDialog(QtWidgets.QDialog):
         self.setLayout(layout)
         self.adjustSize()
 
-    def cancel(self):
+    def _onCancel(self):
         self.close()
 
-    def setTitle(self):
+    def _onSetTitle(self):
         self.parentWidget().setWindowTitle(self.titleLineEdit.text())
         self.close()
 
@@ -405,11 +411,9 @@ class ConnectionListWidget(QtWidgets.QWidget):
         parameter "connections".
         """
         self.listWidget.clear()
-        for c in connections:
-            self.itemWidgets.append(QtWidgets.QListWidgetItem(c['name'],
+        for name, c in connections.items():
+            self.itemWidgets.append(QtWidgets.QListWidgetItem(name,
                 self.listWidget))
-            # self.itemWidgets[-1].itemDoubleClicked.connect(
-            #     self._onItemDoubleClicked)
         self._connections = connections
 
     def getConnections(self):
@@ -421,7 +425,7 @@ class ConnectionListWidget(QtWidgets.QWidget):
         -------
         Returns the currently selected connection.
         """
-        return self._connections[self.listWidget.currentRow()]
+        return self._connections[self.listWidget.currentItem().text()]
 
     def _onItemDoubleClicked(self):
         self.itemDoubleClicked.emit()
@@ -556,9 +560,15 @@ class SerialConfigWidget(QtWidgets.QWidget):
             'data_bits': int(self.databitsComboBox.currentText()),
             'stop_bits': float(self.stopbitsComboBox.currentText()),
             'parity': self.parityComboBox.currentText(),
-            'flow_control': self.flowControlComboBox.currentText(),
+            'flow_control': 'none',
             'local_echo_enabled': False
         }
+
+        if self.flowControlComboBox.currentText() == 'RTS/CTS':
+            serial_config['flow_control'] = 'hardware'
+        else:
+            serial_config['flow_control'] = 'software'
+
 
         return serial_config
 
@@ -629,8 +639,14 @@ class SerialConfigDialog(QtWidgets.QDialog):
         scw.baudrateEdit.setText(str(config['baud']))
         scw.databitsComboBox.setCurrentIndex(
             scw.databitsComboBox.findText(str(config['data_bits'])))
-        scw.stopbitsComboBox.setCurrentIndex(
-            scw.stopbitsComboBox.findText(str(config['stop_bits'])))
+        # If the stop bits is a whole number remove the ".0" from the string.
+        if config['stop_bits'] % 1 == 0.0:
+            sb = str(config['stop_bits'])[:-2]
+            scw.stopbitsComboBox.setCurrentIndex(
+                scw.stopbitsComboBox.findText(sb))
+        else:
+            scw.stopbitsComboBox.setCurrentIndex(
+                scw.stopbitsComboBox.findText(str(config['stop_bits'])))
         scw.parityComboBox.setCurrentIndex(
             scw.parityComboBox.findText(str(config['parity']).upper()))
         if config['flow_control'] == 'none':
@@ -651,7 +667,7 @@ class SerialConfigDialog(QtWidgets.QDialog):
             self._shake()
             return
         connections = self._connectionListWidget.getConnections()
-        connections.append(config)
+        connections[config['name']] = config
         self._connectionListWidget.setConnections(connections)
 
     def setConnections(self, connections):

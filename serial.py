@@ -223,7 +223,14 @@ class SerialConnections():
                 contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
                 # Parse the file as JSON.
                 connections = json.loads(contents)
-            return connections
+                # Convert the connections into a dict using the names.
+                # This is so we can find the items by name quickly.
+                #  https://docs.python.org/3.6/faq/design.html#how-are-dictionaries-implemented
+                d = {}
+                for c in connections:
+                    d[c['name']] = c
+                    d[c['name']]['stop_bits'] = float(d[c['name']]['stop_bits'])
+            return d
         except TypeError:
             # If there was a parsing error post a message to the console.
             console.enqueue('Error parsing the preferences file.')
