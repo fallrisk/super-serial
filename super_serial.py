@@ -94,6 +94,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self._splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         self._highlightManagerWidget = highlighter_widget.HighlightManagerWidget(
             self, self._highlighManager)
+        self.setTitleDialog = SetTitleDialog(self)
 
         # Menu
         # ----
@@ -262,12 +263,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def setTitle(self):
         # Memory Leaks with Dialogs https://stackoverflow.com/a/37928086.
-        dialog = SetTitleDialog(self)
-        dialog.setModal(True)
-        dialog.show()
-        dialog.exec_()
-        self._serialConfigDialog.close()
-        self.close()
+        self.setTitleDialog.setModal(True)
+        self.setTitleDialog.titleLineEdit.setFocus(QtCore.Qt.OtherFocusReason)
+        self.setTitleDialog.show()
 
     def showConsole(self):
         # To make the console not viewable...
@@ -347,6 +345,7 @@ class SetTitleDialog(QtWidgets.QDialog):
 
         self.setWindowTitle("Set Window Title")
         self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.Dialog)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         # Widgets
         # -------
@@ -373,11 +372,11 @@ class SetTitleDialog(QtWidgets.QDialog):
         self.adjustSize()
 
     def _onCancel(self):
-        self.close()
+        self.hide()
 
     def _onSetTitle(self):
         self.parentWidget().setWindowTitle(self.titleLineEdit.text())
-        self.close()
+        self.hide()
 
 
 class ConnectionListWidget(QtWidgets.QWidget):
@@ -501,6 +500,8 @@ class SerialConfigWidget(QtWidgets.QWidget):
         self.errorWidget.setObjectName('error')
         self.errorWidget.setWordWrap(True)
 
+        self.moreSettingsButton = QtWidgets.QPushButton('More Settings')
+
         self.cancelButton = QtWidgets.QPushButton('Cancel')
         self.connectButton = QtWidgets.QPushButton('Connect')
         self.saveButton = QtWidgets.QPushButton('Save')
@@ -539,10 +540,12 @@ class SerialConfigWidget(QtWidgets.QWidget):
 
         connectionLayout.addWidget(self.errorWidget, 7, 0, 1, 4)
 
-        connectionLayout.addWidget(self.cancelButton, 8, 0, 1, 1)
-        connectionLayout.addWidget(self.connectButton, 8, 1, 1, 1)
-        connectionLayout.addWidget(self.saveButton, 8, 2, 1, 1)
-        connectionLayout.addWidget(self.loadButton, 8, 3, 1, 1)
+        connectionLayout.addWidget(self.moreSettingsButton, 8, 2, 1, 2)
+
+        connectionLayout.addWidget(self.cancelButton, 9, 0, 1, 1)
+        connectionLayout.addWidget(self.connectButton, 9, 1, 1, 1)
+        connectionLayout.addWidget(self.saveButton, 9, 2, 1, 1)
+        connectionLayout.addWidget(self.loadButton, 9, 3, 1, 1)
 
         self.setLayout(connectionLayout)
 
