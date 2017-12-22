@@ -52,149 +52,147 @@ __author__ = 'Justin Watson'
 # At the very least the patch number always increases per build/release.
 __version__ = 'v0.1.0' # Major.Minor.Patch
 
+
 class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self, args):
         QtWidgets.QMainWindow.__init__(self)
+
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Super Serial")
 
-        self.consoleWidget = ConsoleWidget()
-        console.messages.newMsg.connect(self._onNewConsoleMsg)
 
+        # Initialization Pre UI
+        # ---------------------
+        # Only things that HAVE to be done before the UI go here.
+        script_dir = osp.dirname(osp.realpath(__file__))
+
+        # Set the application icon.
+        app_icon = QtGui.QIcon(script_dir + osp.sep + 'super_serial_64x64.ico')
+        self.setWindowIcon(app_icon)
+
+        # Create file watcher for the preferences file.
         self._watcher = QtCore.QFileSystemWatcher()
         preferences.setWatcher(self._watcher)
-
-        preferenes_file = os.getcwd() + osp.sep + 'preferences.json'
-        if args.preferences_file is not None:
-            preferenes_file = args.preferences_file
-        preferences.load(preferenes_file)
-
-        self.connections_file = os.getcwd() + osp.sep + 'connections.json'
-        if args.connections_file is not None:
-            self.connections_file = args.connections_file
 
         serial_config = None
         if args.port is not None:
             serial_config = serial_args_to_config(args)
 
+        self._serialPort = serial.SerialPort()
+        self._highlighManager = highlighter.HighlightManager()
+
+        # Widgets
+        # -------
+        self._mainWidget = QtWidgets.QWidget(self)
+        self._consoleWidget = ConsoleWidget()
+        self._serialConfigDialog = SerialConfigDialog(self, self._serialPort)
+        self._connectionLabel = QtWidgets.QLabel('Disconnected')
+        self._serialConsoleWidget = serial_console_widget.SerialConsoleWidget(
+            self._highlighManager, self)
+        self._serialConsoleWidget.setVerticalScrollBarPolicy(
+            QtCore.Qt.ScrollBarAlwaysOn)
+        self._splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._highlightManagerWidget = highlighter_widget.HighlightManagerWidget(
+            self, self._highlighManager)
+
+        # Menu
+        # ----
+        self.superSerialMenu = QtWidgets.QMenu('&Super Serial', self)
+        self.viewMenu = QtWidgets.QMenu('&View', self)
+        self.helpMenu = QtWidgets.QMenu('&Help', self)
+
+        self.menuBar().addMenu(self.superSerialMenu)
+        self.menuBar().addMenu(self.viewMenu)
+        self.menuBar().addSeparator()
+        self.menuBar().addMenu(self.helpMenu)
+
+        # Menu: Super Serial
+        # ------------------
+        self.connectAction = self.superSerialMenu.addAction(
+            '&Connect to Device', self.connect,
+            QtCore.Qt.CTRL + QtCore.Qt.Key_P)
+        self.disconnectAction = self.superSerialMenu.addAction('&Disconnect',
+            self.disconnect, QtCore.Qt.CTRL + QtCore.Qt.Key_D)
+        self.disconnectAction.setEnabled(False)
+        self.superSerialMenu.addAction('&Set Title', self.setTitle)
+        self.superSerialMenu.addAction('&Exit', self.close,
+            QtCore.Qt.CTRL + QtCore.Qt.Key_Q)
+
+        # Menu: View
+        # ----------
+        self.consoleAction = self.viewMenu.addAction(
+            'Show Console', self.showConsole, 'Ctrl+`')
+        self.highlightManagerAction = self.viewMenu.addAction(
+            'Show Highlights', self.showHighlightManager)
+        self.viewMenu.addSeparator()
+        self.localEchoAction = self.viewMenu.addAction('Enable Local Echo',
+            self._onLocalEchoAction)
+        self.localEchoAction.setCheckable(True)
+        self.localEchoAction.setChecked(False)
+        # self.show_crlf_action = self.viewMenu.addAction('Show CR and LF',
+        #     self._onShowCrLfAction)
+
+        # Menu: Help
+        self.helpMenu.addAction('&Documentation', self.documentation,
+            QtCore.Qt.Key_F1)
+        self.helpMenu.addAction('&Super Serial Webpage', self.webpage)
+        self.helpMenu.addAction('&About Super Serial', self.about)
+
+        # Connections
+        # -----------
+        console.messages.newMsg.connect(self._onNewConsoleMsg)
+        # Subscribe to preferences file update events.
+        preferences.subscribe(self._onPrefsUpdate)
+        self._serialPort.opened.connect(self._onSerialOpened)
+        self._serialPort.closed.connect(self._onSerialClosed)
+        self._serialPort.readyRead.connect(self._onSerialPortReadyRead)
+        self._serialConsoleWidget.dataWrite.connect(self._onSerConWidWrite)
+
+        # Layout
+        # ------
+        layout = QtWidgets.QVBoxLayout(self._mainWidget)
+        # Remove the space outlining the widgets.
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.statusBar().addWidget(self._connectionLabel)
+
+        self._splitter.addWidget(self._serialConsoleWidget)
+        self._splitter.addWidget(self._consoleWidget)
+        self._splitter.setSizes([500, 300])
+
+        layout.addWidget(self._splitter)
+
+        self._mainWidget.setFocus()
+        self.setCentralWidget(self._mainWidget)
+        self._consoleWidget.hide()
+        self.resize(800, 480)
+
+        # Initialization Post UI
+        # ----------------------
         console.enqueue('Version: {}'.format(__version__))
         console.enqueue('Executable Path: {}'.format(osp.realpath(__file__)))
         console.enqueue('Working Directory: {}'.format(os.getcwd()))
-        console.enqueue('Loaded preferences file: {}'.format(preferenes_file))
-
-        # Subscribe to preferences file update events.
-        preferences.subscribe(self._onPrefsUpdate)
-        # preferences.prefsUpdated.connect(self._onPrefsUpdate)
-
-        # The serial port class manages all the serial port.
-        # It creates a thread to hold the data. It handles
-        # connecting and sending events to the gui.
-        self._serial_port = serial.SerialPort()
-
-        self._serialConfigDialog = SerialConfigDialog(self, self._serial_port)
-
-        script_dir = osp.dirname(osp.realpath(__file__))
-        app_icon = QtGui.QIcon(script_dir + osp.sep + 'super_serial_64x64.ico')
-
-        self.setWindowIcon(app_icon)
-
-        #self.setGeometry(200, 200, 800, 480)
-        self.resize(800, 480)
 
         with open('style.qss', encoding='utf-8') as style_file:
             self.setStyleSheet(style_file.read())
 
-        self.super_serial_menu = QtWidgets.QMenu('&Super Serial', self)
-        self.menuBar().addMenu(self.super_serial_menu)
-
-        self.connect_action = self.super_serial_menu.addAction('&Connect to Device', self.connect,
-            QtCore.Qt.CTRL + QtCore.Qt.Key_P)
-
-        # The function addAction returns a QAction object.
-        self.disconnect_action = self.super_serial_menu.addAction('&Disconnect', self.disconnect,
-            QtCore.Qt.CTRL + QtCore.Qt.Key_D)
-        self.disconnect_action.setEnabled(False)
-
-        self.super_serial_menu.addAction('&Set Title', self.setTitle)
-
-        self.super_serial_menu.addAction('&Exit', self.fileQuit,
-                                 QtCore.Qt.CTRL + QtCore.Qt.Key_Q)
-        self.menuBar().addMenu(self.super_serial_menu)
-
-        self.view_menu = QtWidgets.QMenu('&View', self)
-        self.menuBar().addMenu(self.view_menu)
-
-        self.console_action = self.view_menu.addAction('Show Console', self.showConsole,
-            'Ctrl+`')
-        self.highlighter_manager_action = self.view_menu.addAction('Show Highlights', self.showHighlights)
-
-        self.view_menu.addSeparator()
-        self.local_echo_action = self.view_menu.addAction('Enable Local Echo', self._onLocalEchoAction)
-        self.local_echo_action.setCheckable(True)
-        self.local_echo_action.setChecked(False)
-
-        self.show_crlf_action = self.view_menu.addAction('Show CR and LF', self._onShowCrLfAction)
-
-        self.help_menu = QtWidgets.QMenu('&Help', self)
-        self.menuBar().addSeparator()
-        self.menuBar().addMenu(self.help_menu)
-
-        self.help_menu.addAction('&Documentation', self.documentation,
-            QtCore.Qt.Key_F1)
-        self.help_menu.addAction('&Super Serial Webpage', self.webpage)
-        self.help_menu.addAction('&About Super Serial', self.about)
-
-        self.main_widget = QtWidgets.QWidget(self)
-
-        l = QtWidgets.QVBoxLayout(self.main_widget)
-        # Remove the space outlining the widgets.
-        l.setContentsMargins(0, 0, 0, 0)
+        # Load preferences file.
+        preferences_file = os.getcwd() + osp.sep + 'preferences.json'
+        if args.preferences_file is not None:
+            preferences_file = args.preferences_file
+        preferences.load(preferences_file)
+        console.enqueue('Loaded preferences file: {}'.format(preferences_file))
 
         mono_font = QtGui.QFont(preferences.get('font_face'))
         mono_font.setPointSize(int(preferences.get('font_size')))
+        self._consoleWidget.setFont(mono_font)
+        self._serialConsoleWidget.document().setDefaultFont(mono_font)
 
-        self.consoleWidget.setFont(mono_font)
-
-        self.highlight_manager = highlighter.HighlightManager()
-
-        self.serialConsoleWidget = serial_console_widget.SerialConsoleWidget(self.highlight_manager, self)
-        self.serialConsoleWidget.document().setDefaultFont(mono_font)
-        self.serialConsoleWidget.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-
-        self.highlightManagerWidget = highlighter_widget.HighlightManagerWidget(self, self.highlight_manager)
-
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        splitter.addWidget(self.serialConsoleWidget)
-        splitter.addWidget(self.consoleWidget)
-
-        splitter.setSizes([500, 300])
-
-        l.addWidget(splitter)
-        l.setSpacing(0)
-
-        self.main_widget.setFocus()
-        self.setCentralWidget(self.main_widget)
-
-        self.connectionLabel = QtWidgets.QLabel('Disconnected')
-
-        self.statusBar().addWidget(self.connectionLabel)
-        self.consoleWidget.hide()
-
-        self._serial_port.opened.connect(self._onSerialOpened)
-        self._serial_port.closed.connect(self._onSerialClosed)
-        self._serial_port.readyRead.connect(self._onSerialPortReadyRead)
-
-        self.serialConsoleWidget.dataWrite.connect(self._onSerConWidWrite)
-
-        # Register the control character text object.
-        controlCharInterface = serial_console_widget.ControlCharObject(self)
-        self.serialConsoleWidget.document().documentLayout().registerHandler(
-            serial_console_widget.ControlCharFormat, controlCharInterface)
-
-        # Initialization
-        # --------------
-
-        self._serialConfigDialog.updatePortList()
+        # Load connections file.
+        self.connections_file = os.getcwd() + osp.sep + 'connections.json'
+        if args.connections_file is not None:
+            self.connections_file = args.connections_file
 
         self._connections = {}
         self._connections_successfully_loaded = False
@@ -205,7 +203,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if connections_okay:
             # Convert the connections into a dict using the names.
             # This is so we can find the items by name quickly.
-            #  https://docs.python.org/3.6/faq/design.html#how-are-dictionaries-implemented
+            # https://docs.python.org/3.6/faq/design.html#how-are-dictionaries-implemented
             d = {}
             for c in connections:
                 d[c['name']] = c
@@ -225,69 +223,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 if open_result != 0:
                     console.enqueue('Error connection: {}'.format(
                         self._serial_port.qserialport_errors[config_result]))
-
-    def fileQuit(self):
-        self._serialConfigDialog.close()
-        self.close()
-
-    def closeEvent(self, ce):
-        self.fileQuit()
+        self._serialConfigDialog.updatePortList()
 
     def about(self):
         QtWidgets.QMessageBox.about(self, 'Super Serial',
-            'Copyright 2017 Justin Watson\r\nSuper Serial\r\nVersion: {}'.format(__version__))
-
-    def webpage(self):
-        url = QUrl('http://superserial.io')
-        QDesktopServices.openUrl(url)
-
-    def documentation(self):
-        url = QUrl('http://docs.superserial.io/en/latest/')
-        QDesktopServices.openUrl(url)
-
-    def connect(self):
-        self._serialConfigDialog.setModal(True)
-        self._serialConfigDialog.show()
-
-    def disconnect(self):
-        self._serial_port.close()
-
-    def setTitle(self):
-        # Memory Leaks with Dialogs https://stackoverflow.com/a/37928086.
-        dialog = SetTitleDialog(self)
-        dialog.setModal(True)
-        dialog.show()
-        dialog.exec_()
-
-    def showConsole(self):
-        # To make the console not viewable...
-        # https://stackoverflow.com/a/371634
-        if self.consoleWidget.isHidden():
-            self.consoleWidget.show()
-            self.console_action.setText('Hide Console')
-        else:
-            self.consoleWidget.hide()
-            self.console_action.setText('Show Console')
-
-    def showHighlights(self):
-        self.highlightManagerWidget.show()
-
-    def _onShowCrLfAction(self):
-        if self.serialConsoleWidget.show_crlf:
-            self.serialConsoleWidget.show_crlf = False
-            self.show_crlf_action.setText('Hide CR and LF')
-        else:
-            self.serialConsoleWidget.show_crlf = True
-            self.show_crlf_action.setText('Show CR and LF')
-        self.serialConsoleWidget.repaint()
-
-    def _onLocalEchoAction(self):
-        if self.serialConsoleWidget.local_echo_enabled:
-            self.serialConsoleWidget.local_echo_enabled = False
-            self.local_echo_action.setChecked(False)
-        else:
-            self.serialConsoleWidget.local_echo_enabled = True
-            self.local_echo_action.setChecked(True)
+            'Copyright 2017 Justin Watson\r\nSuper Serial\r\nVersion: {}'.
+            format(__version__))
 
     def closeEvent(self, event):
         # This method is overriding the event 'close'.
@@ -306,6 +247,66 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             event.accept()
         else:
             event.ignore()
+        self.fileQuit()
+
+    def connect(self):
+        self._serialConfigDialog.setModal(True)
+        self._serialConfigDialog.show()
+
+    def disconnect(self):
+        self._serial_port.close()
+
+    def documentation(self):
+        url = QUrl('http://docs.superserial.io/en/latest/')
+        QDesktopServices.openUrl(url)
+
+    def setTitle(self):
+        # Memory Leaks with Dialogs https://stackoverflow.com/a/37928086.
+        dialog = SetTitleDialog(self)
+        dialog.setModal(True)
+        dialog.show()
+        dialog.exec_()
+        self._serialConfigDialog.close()
+        self.close()
+
+    def showConsole(self):
+        # To make the console not viewable...
+        # https://stackoverflow.com/a/371634
+        if self._consoleWidget.isHidden():
+            self._consoleWidget.show()
+            self.consoleAction.setText('Hide Console')
+        else:
+            self._consoleWidget.hide()
+            self.consoleAction.setText('Show Console')
+
+    def showHighlightManager(self):
+        self._highlightManagerWidget.show()
+
+    def webpage(self):
+        url = QUrl('http://superserial.io')
+        QDesktopServices.openUrl(url)
+
+    def _onLocalEchoAction(self):
+        if self.serialConsoleWidget.local_echo_enabled:
+            self.serialConsoleWidget.local_echo_enabled = False
+            self.local_echo_action.setChecked(False)
+        else:
+            self.serialConsoleWidget.local_echo_enabled = True
+            self.local_echo_action.setChecked(True)
+
+    def _onNewConsoleMsg(self):
+        self._consoleWidget.consoleOutput.append(console.dequeue())
+
+    def _onPrefsUpdate(self):
+        mono_font = QtGui.QFont(preferences.get('font_face'))
+        mono_font.setPointSize(int(preferences.get('font_size')))
+        self.consoleWidget.setFont(mono_font)
+        self.serialConsoleWidget.document().setDefaultFont(mono_font)
+
+    def _onSerialClosed(self):
+        self.connectionLabel.setText('Disconnected')
+        self.disconnect_action.setEnabled(False)
+        self.connect_action.setEnabled(True)
 
     def _onSerialOpened(self):
         self.connectionLabel.setText('Connected: ' + self._serial_port.configToStr())
@@ -313,10 +314,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.connect_action.setEnabled(False)
         self.serialConsoleWidget.setFocus(QtCore.Qt.OtherFocusReason)
 
-    def _onSerialClosed(self):
-        self.connectionLabel.setText('Disconnected')
-        self.disconnect_action.setEnabled(False)
-        self.connect_action.setEnabled(True)
+    def _onSerialPortReadyRead(self):
+        available = self._serial_port.bytesAvailable()
+        if available > 0:
+            data = self._serial_port.read(available)
+            self.serialConsoleWidget.putData(data.decode('utf-8'))
 
     def _onSerConWidWrite(self, data):
         """
@@ -326,20 +328,14 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if self._serial_port.is_connected:
             self._serial_port.write(b)
 
-    def _onSerialPortReadyRead(self):
-        available = self._serial_port.bytesAvailable()
-        if available > 0:
-            data = self._serial_port.read(available)
-            self.serialConsoleWidget.putData(data.decode('utf-8'))
-
-    def _onNewConsoleMsg(self):
-        self.consoleWidget.consoleOutput.append(console.dequeue())
-
-    def _onPrefsUpdate(self):
-        mono_font = QtGui.QFont(preferences.get('font_face'))
-        mono_font.setPointSize(int(preferences.get('font_size')))
-        self.consoleWidget.setFont(mono_font)
-        self.serialConsoleWidget.document().setDefaultFont(mono_font)
+    def _onShowCrLfAction(self):
+        if self.serialConsoleWidget.show_crlf:
+            self.serialConsoleWidget.show_crlf = False
+            self.show_crlf_action.setText('Hide CR and LF')
+        else:
+            self.serialConsoleWidget.show_crlf = True
+            self.show_crlf_action.setText('Show CR and LF')
+        self.serialConsoleWidget.repaint()
 
 
 class SetTitleDialog(QtWidgets.QDialog):
@@ -903,7 +899,7 @@ def main():
     aw = ApplicationWindow(args)
     aw.show()
 
-    app.exec()
+    app.exec_()
 
     # Check for memory leaks.
     # https://stackoverflow.com/a/37928086
