@@ -92,6 +92,50 @@ ConsoleWidget > QLineEdit {
     outline: none;
 }
 
+/**
+ * HighlightManager
+ */
+
+HighlightManagerWidget {
+    background: #C7CBD1;
+    color: #404040;
+}
+
+HighlighterWidget > SmallButton {
+    background: #E0E2E6;
+    border-radius: 2px;
+    margin: 2px 2px 2px 2px;
+}
+
+HighlighterWidget > SmallButton:hover {
+    background: #E8EAED;
+}
+
+HighlighterWidget > SmallButton:checked {
+    background: #B4B9C2;
+}
+
+HighlighterWidget > ColorButton {
+    border: none;
+    border-radius: 2px;
+    height: 24px;
+    margin: 0;
+    width: 34px;
+}
+
+HighlighterWidget > QLineEdit {
+    border: none;
+    border-radius: 2px;
+    font: normal 12px;
+    padding: 4px 5px 4px 5px;
+}
+
+/* /HighlightManager */
+
+MaterialColorDialog > ColorButton {
+    border-radius: 2px;
+}
+
 QSplitter[orientation="2"]::handle {
     background-color: #C7CBD1;
     max-height: 6px;
@@ -266,3 +310,5 @@ SetTitleDialog > QLineEdit {
 SetTitleDialog > QPushButton:hover {
     background: #E8EAED;
 }
+
+
