@@ -287,12 +287,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         QDesktopServices.openUrl(url)
 
     def _onLocalEchoAction(self):
-        if self.serialConsoleWidget.local_echo_enabled:
-            self.serialConsoleWidget.local_echo_enabled = False
-            self.local_echo_action.setChecked(False)
+        if self._serialConsoleWidget.local_echo_enabled:
+            self._serialConsoleWidget.local_echo_enabled = False
+            self.localEchoAction.setChecked(False)
         else:
-            self.serialConsoleWidget.local_echo_enabled = True
-            self.local_echo_action.setChecked(True)
+            self._serialConsoleWidget.local_echo_enabled = True
+            self.localEchoAction.setChecked(True)
 
     def _onNewConsoleMsg(self):
         self._consoleWidget.consoleOutput.append(console.dequeue())
@@ -300,42 +300,42 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def _onPrefsUpdate(self):
         mono_font = QtGui.QFont(preferences.get('font_face'))
         mono_font.setPointSize(int(preferences.get('font_size')))
-        self.consoleWidget.setFont(mono_font)
-        self.serialConsoleWidget.document().setDefaultFont(mono_font)
+        self._consoleWidget.setFont(mono_font)
+        self._serialConsoleWidget.document().setDefaultFont(mono_font)
 
     def _onSerialClosed(self):
         self.connectionLabel.setText('Disconnected')
-        self.disconnect_action.setEnabled(False)
-        self.connect_action.setEnabled(True)
+        self.disconnectAction.setEnabled(False)
+        self.connectAction.setEnabled(True)
 
     def _onSerialOpened(self):
-        self.connectionLabel.setText('Connected: ' + self._serial_port.configToStr())
-        self.disconnect_action.setEnabled(True)
-        self.connect_action.setEnabled(False)
-        self.serialConsoleWidget.setFocus(QtCore.Qt.OtherFocusReason)
+        self.connectionLabel.setText('Connected: ' + self._serialPort.configToStr())
+        self.disconnectAction.setEnabled(True)
+        self.connectAction.setEnabled(False)
+        self._serialConsoleWidget.setFocus(QtCore.Qt.OtherFocusReason)
 
     def _onSerialPortReadyRead(self):
-        available = self._serial_port.bytesAvailable()
+        available = self._serialPort.bytesAvailable()
         if available > 0:
-            data = self._serial_port.read(available)
-            self.serialConsoleWidget.putData(data.decode('utf-8'))
+            data = self._serialPort.read(available)
+            self._serialConsoleWidget.putData(data.decode('utf-8'))
 
     def _onSerConWidWrite(self, data):
         """
         on serial console widget write
         """
         b = data.encode('ascii')
-        if self._serial_port.is_connected:
-            self._serial_port.write(b)
+        if self._serialPort.is_connected:
+            self._serialPort.write(b)
 
     def _onShowCrLfAction(self):
-        if self.serialConsoleWidget.show_crlf:
-            self.serialConsoleWidget.show_crlf = False
-            self.show_crlf_action.setText('Hide CR and LF')
+        if self._serialConsoleWidget.show_crlf:
+            self._serialConsoleWidget.show_crlf = False
+            self._showCrLfAction.setText('Hide CR and LF')
         else:
-            self.serialConsoleWidget.show_crlf = True
-            self.show_crlf_action.setText('Show CR and LF')
-        self.serialConsoleWidget.repaint()
+            self._serialConsoleWidget.show_crlf = True
+            self.showCrLfAction.setText('Show CR and LF')
+        self._serialConsoleWidget.repaint()
 
 
 class SetTitleDialog(QtWidgets.QDialog):
