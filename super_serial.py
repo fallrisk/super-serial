@@ -587,6 +587,10 @@ class SerialConfigWidget(QtWidgets.QWidget):
         return serial_config
 
 
+class SerialConfigAdvancedWidget(QtWidgets.QWidget):
+    pass
+
+
 class SerialConfigDialog(QtWidgets.QDialog):
     """Dialog to configure the serial port.
     """
