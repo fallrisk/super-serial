@@ -15,7 +15,6 @@ Copyright 2017 Justin Watson
 """
 
 from datetime import datetime
-import json
 import os
 import os.path as osp
 import queue
@@ -23,8 +22,9 @@ import re
 import threading
 import time
 
-import jsonschema
+import pykwalify.core
 from PyQt5 import QtCore, QtSerialPort
+import yaml
 
 import console
 
@@ -219,11 +219,11 @@ class SerialConnections():
             with open(filePath, encoding='utf-8') as connections_file:
                 contents = connections_file.read()
                 # Remove all comments that start with "//".
-                contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
+                #contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
                 # Remove blank lines.
-                contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
+                #contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
                 # Parse the file as JSON.
-                connections = json.loads(contents)
+                connections = yaml.load(contents)
             return connections
         except TypeError:
             # If there was a parsing error post a message to the console.
@@ -237,14 +237,13 @@ class SerialConnections():
 
         References
         ----------
-        * http://json-schema.org/specification.html
+        * http://pykwalify.readthedocs.io/en/master/basics.html
         """
-        with open('connections.schema', encoding='utf-8') as schema_file:
-            schema = json.loads(schema_file.read())
         try:
-            jsonschema.validate(connections, schema)
-        except jsonschema.ValidationError as e:
-            # print(e)
+            # jsonschema.validate(connections, schema)
+            c = pykwalify.core.Core(source_data=connections, schema_files=['connections_schema.yaml'])
+            c.validate(raise_exception=True)
+        except Exception as e:
             console.enqueue(e.message)
             return False
         return True
@@ -256,4 +255,5 @@ class SerialConnections():
         # print('saving')
         # print(connections)
         with open(filePath, 'w', encoding='utf-8') as connections_file:
-            json.dump(connections, connections_file, indent=4, sort_keys=True)
+            yaml.dump(connections, connections_file, indent=2,
+                default_flow_style=False)

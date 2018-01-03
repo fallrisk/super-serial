@@ -23,11 +23,11 @@ _preferences_manager
 
 """
 
-import json
 import os
 import re
 
 from PyQt5 import QtCore
+import yaml
 
 import console
 
@@ -79,16 +79,16 @@ class PreferencesManager(QtCore.QObject):
         self._file_path = None
         self._watcher = None
 
-    def parseFileJson(self, file_path):
+    def parseFileYaml(self, file_path):
         # Load the preferences file if it exists.
         with open(file_path, encoding='utf-8') as data_file:
             contents = data_file.read()
             # Remove all comments that start with "//".
-            contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
+            #contents = re.sub('//.*[\r\n]*', '', contents, 0, re.M)
             # Remove blank lines.
-            contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
-            # Parse the file as JSON.
-            self._preferences = json.loads(contents)
+            #contents = re.sub('^\s*[\r\n]*', '', contents, 0, re.M)
+            # Parse the file as YAML.
+            self._preferences = yaml.load(contents)
 
     def load(self, file_path):
         if self._watcher is None:
@@ -98,7 +98,7 @@ class PreferencesManager(QtCore.QObject):
                 file_path))
             return
         try:
-            self.parseFileJson(file_path)
+            self.parseFileYaml(file_path)
         except TypeError:
             # If there was a parsing error keep the current settings and
             # post a message to the console.

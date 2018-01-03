@@ -1,0 +1,15 @@
+- baud: 115200
+  data_bits: 8
+  flow_control: software
+  local_echo_enabled: false
+  name: jumping whirlwind
+  parity: NONE
+  port: COM20
+  stop_bits: 2.0
+- baud: 115200
+  data_bits: 8
+  flow_control: none
+  name: laughing tiger
+  parity: none
+  port: COM18
+  stop_bits: 1.0

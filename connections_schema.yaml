@@ -1,0 +1,33 @@
+
+type: seq
+sequence:
+  - type: map
+    mapping:
+      name:
+        type: str
+        required: True
+      port:
+        type: str
+        required: True
+      baud:
+        type: int
+        enum: [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+        required: True
+      data_bits:
+        type: int
+        enum: [5, 6, 7, 8]
+        required: True
+      stop_bits:
+        type: float
+        enum: [1.0, 1.5, 2.0]
+        required: True
+      parity:
+        type: str
+        enum: ["none", "mark", "space", "even", "odd"]
+        required: True
+      flow_control:
+        type: str
+        enum: ["none", "software", "hardware"]
+        required: True
+      local_echo_enabled:
+        type: bool

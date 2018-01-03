@@ -1,5 +1,5 @@
 """
-Copyright 2017 Justin Watson
+Copyright 2017-2018 Justin Watson
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ References
 """
 
 import argparse
+import collections
 import copy
 import json
 import os
@@ -179,7 +180,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.setStyleSheet(style_file.read())
 
         # Load preferences file.
-        preferences_file = os.getcwd() + osp.sep + 'preferences.json'
+        preferences_file = os.getcwd() + osp.sep + 'preferences.yaml'
         if args.preferences_file is not None:
             preferences_file = args.preferences_file
         preferences.load(preferences_file)
@@ -191,7 +192,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self._serialConsoleWidget.document().setDefaultFont(mono_font)
 
         # Load connections file.
-        self.connections_file = os.getcwd() + osp.sep + 'connections.json'
+        self.connections_file = os.getcwd() + osp.sep + 'connections.yaml'
         if args.connections_file is not None:
             self.connections_file = args.connections_file
 
@@ -205,7 +206,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             # Convert the connections into a dict using the names.
             # This is so we can find the items by name quickly.
             # https://docs.python.org/3.6/faq/design.html#how-are-dictionaries-implemented
-            d = {}
+            # Using collections.OrderedDict to keep the order the same in the list
+            # widget.
+            d = collections.OrderedDict()
             for c in connections:
                 d[c['name']] = c
                 d[c['name']]['stop_bits'] = float(d[c['name']]['stop_bits'])
@@ -228,7 +231,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def about(self):
         QtWidgets.QMessageBox.about(self, 'Super Serial',
-            'Copyright 2017 Justin Watson\r\nSuper Serial\r\nVersion: {}'.
+            'Copyright 2017-2018 Justin Watson\r\nSuper Serial\r\nVersion: {}'.
             format(__version__))
 
     def closeEvent(self, event):
