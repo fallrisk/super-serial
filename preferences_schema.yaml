@@ -1,0 +1,12 @@
+
+type: map
+mapping:
+  font_face:
+    type: str
+  font_size:
+    type: int
+    range:
+      min: 8
+      max: 22
+  prompt_on_quit:
+    type: bool
