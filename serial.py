@@ -22,7 +22,7 @@ import re
 import threading
 import time
 
-import pykwalify.core
+import pykwalify.core, pykwalify.errors
 from PyQt5 import QtCore, QtSerialPort
 import yaml
 
@@ -243,8 +243,8 @@ class SerialConnections():
             # jsonschema.validate(connections, schema)
             c = pykwalify.core.Core(source_data=connections, schema_files=['connections_schema.yaml'])
             c.validate(raise_exception=True)
-        except Exception as e:
-            console.enqueue(e.message)
+        except pykwalify.errors.SchemaError as e:
+            console.enqueue(e.msg)
             return False
         return True
 

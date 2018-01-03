@@ -3,7 +3,7 @@
   flow_control: software
   local_echo_enabled: false
   name: jumping whirlwind
-  parity: NONE
+  parity: none
   port: COM20
   stop_bits: 2.0
 - baud: 115200

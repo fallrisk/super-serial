@@ -29,7 +29,6 @@ References
 import argparse
 import collections
 import copy
-import json
 import os
 import os.path as osp
 import re
@@ -576,7 +575,7 @@ class SerialConfigWidget(QtWidgets.QWidget):
             'baud': int(self.baudrateEdit.text()),
             'data_bits': int(self.databitsComboBox.currentText()),
             'stop_bits': float(self.stopbitsComboBox.currentText()),
-            'parity': self.parityComboBox.currentText(),
+            'parity': self.parityComboBox.currentText().lower(),
             'flow_control': 'none',
             'local_echo_enabled': False
         }
@@ -860,26 +859,26 @@ def serial_args_to_config(args):
     serial_config['stop_bits'] = str(args.stop_bits)
 
     if args.parity == 'n':
-        serial_config['parity'] = 'NONE'
+        serial_config['parity'] = 'none'
     elif args.parity == 'o':
-        serial_config['parity'] = 'ODD'
+        serial_config['parity'] = 'odd'
     elif args.parity == 'e':
-        serial_config['parity'] = 'EVEN'
+        serial_config['parity'] = 'even'
     elif args.parity == 's':
-        serial_config['parity'] = 'SPACE'
+        serial_config['parity'] = 'space'
     elif args.parity == 'm':
-        serial_config['parity'] = 'MARK'
+        serial_config['parity'] = 'mark'
     else:
-        serial_config['data_bits'] = 'UNK' # Unknown
+        serial_config['data_bits'] = 'unk' # Unknown
 
     if args.flow_control == 's':
         serial_config['flow_control'] = 'XON/XOFF'
     elif args.flow_control == 'h':
         serial_config['flow_control'] = 'RTS/CTS'
     elif args.flow_control == 'n':
-        serial_config['flow_control'] = 'NONE'
+        serial_config['flow_control'] = 'none'
     else:
-        serial_config['flow_control'] = 'UNK'
+        serial_config['flow_control'] = 'unk'
 
     return serial_config
 
