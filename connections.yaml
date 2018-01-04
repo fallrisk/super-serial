@@ -8,8 +8,9 @@
   stop_bits: 2.0
 - baud: 115200
   data_bits: 8
-  flow_control: none
+  flow_control: software
+  local_echo_enabled: false
   name: laughing tiger
-  parity: none
+  parity: even
   port: COM18
   stop_bits: 1.0

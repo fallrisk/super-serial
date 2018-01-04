@@ -23,6 +23,7 @@ References
 * http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html
 * https://wiki.python.org/moin/PyQt/SampleCode
 * https://www.mail-archive.com/pyqt@riverbankcomputing.com/msg16050.html
+* http://keepachangelog.com/en/1.0.0/
 
 """
 
@@ -33,9 +34,11 @@ import os
 import os.path as osp
 import re
 import sys
+import time
 
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.Qt import QDesktopServices, QUrl
+from PyQt5.Qt import QDesktopServices, QUrl, PYQT_VERSION_STR
+from sip import SIP_VERSION_STR
 
 import console
 import highlighter
@@ -55,6 +58,7 @@ __version__ = 'v0.1.0' # Major.Minor.Patch
 
 class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self, args):
+        app_start_time = time.perf_counter()
         QtWidgets.QMainWindow.__init__(self)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -171,7 +175,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         # Initialization Post UI
         # ----------------------
-        console.enqueue('Version: {}'.format(__version__))
+        console.enqueue('Super Serial Version: {}'.format(__version__))
+        console.enqueue(
+            'Qt Version: {}, SIP Version {}, PyQT Version {}'.format(
+                QtCore.QT_VERSION_STR, PYQT_VERSION_STR, SIP_VERSION_STR
+            ))
         console.enqueue('Executable Path: {}'.format(osp.realpath(__file__)))
         console.enqueue('Working Directory: {}'.format(os.getcwd()))
 
@@ -227,6 +235,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                     console.enqueue('Error connection: {}'.format(
                         self._serial_port.qserialport_errors[config_result]))
         self._serialConfigDialog.updatePortList()
+
+        console.enqueue('Load time: {:.4} seconds'.format(
+            time.perf_counter() - app_start_time)
+        )
 
     def about(self):
         QtWidgets.QMessageBox.about(self, 'Super Serial',
